@@ -6,5 +6,10 @@ namespace System
     {
         public static ReactiveProperty<T?> ToReactiveProperty<T>(this IObservable<T?> source)
             => ReactiveProperty.Create(source);
+
+        public static ReactiveProperty<T> ToReactiveProperty<T>(
+                this    IObservable<T>  source,
+                        T               initialValue)
+            => ReactiveProperty.Create(source, initialValue);
     }
 }

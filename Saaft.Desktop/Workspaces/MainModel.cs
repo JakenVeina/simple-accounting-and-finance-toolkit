@@ -25,7 +25,7 @@ namespace Saaft.Desktop.Workspaces
 
             _newFileCommand = ReactiveCommand.Create(() => dataStore.Value = FileEntity.New);
 
-            _title = ReactiveProperty.CreateStatic("Simple Accounting and Finance Toolkit");
+            _title = ReactiveProperty.Create("Simple Accounting and Finance Toolkit");
         }
 
         public ReactiveCommand<Unit> NewFileCommand

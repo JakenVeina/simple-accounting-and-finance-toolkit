@@ -8,6 +8,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Accounts/Resources.xaml"/>
                 <ResourceDictionary Source="Database/Resources.xaml"/>
                 <ResourceDictionary Source="Workspaces/Resources.xaml"/>
             </ResourceDictionary.MergedDictionaries>

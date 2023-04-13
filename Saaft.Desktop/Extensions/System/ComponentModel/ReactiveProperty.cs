@@ -6,15 +6,22 @@ namespace System.ComponentModel
     public abstract class ReactiveProperty
         : INotifyPropertyChanged
     {
+        public static ReactiveProperty<T> Create<T>(T value)
+            => new(
+                initialValue:   value,
+                source:         Observable.Empty<T>());
+
         public static ReactiveProperty<T?> Create<T>(IObservable<T?> source)
             => new(
                 initialValue:   default,
                 source:         source);
 
-        public static ReactiveProperty<T> CreateStatic<T>(T value)
+        public static ReactiveProperty<T> Create<T>(
+                IObservable<T>  source,
+                T               initialValue)
             => new(
-                initialValue:   value,
-                source:         Observable.Empty<T>());
+                initialValue:   initialValue,
+                source:         source);
 
         public ReactiveProperty()
             => _subscriptionsByHandler = new();

@@ -1,8 +1,17 @@
-﻿namespace Saaft.Data.Database
+﻿using System.Collections.Immutable;
+
+using Saaft.Data.Accounts;
+
+namespace Saaft.Data.Database
 {
     public record Entity
     {
         public static readonly Entity Empty
-            = new();
+            = new()
+            {
+                AccountVersions = ImmutableList<VersionEntity>.Empty,
+            };
+
+        public required ImmutableList<VersionEntity> AccountVersions { get; init; }
     }
 }

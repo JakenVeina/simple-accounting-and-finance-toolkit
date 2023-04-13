@@ -12,7 +12,7 @@
         <TextBlock DockPanel.Dock="Top" Text="{Binding Name.Value}" />
         <TabControl>
             <TabItem Header="Accounts">
-                <TextBlock>Accounts List</TextBlock>
+                <ContentControl Content="{Binding AccountsList, Mode=OneTime}" />
             </TabItem>
         </TabControl>
     </DockPanel>
