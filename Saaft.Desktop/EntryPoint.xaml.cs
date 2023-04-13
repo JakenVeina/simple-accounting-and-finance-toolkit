@@ -12,6 +12,7 @@ namespace Saaft.Desktop
         {
             _serviceProvider = new ServiceCollection()
                 .AddSingleton<DataStore>()
+                .AddTransient<Accounts.FormWorkspaceModelFactory>()
                 .AddTransient<Accounts.ListViewItemModelFactory>()
                 .AddTransient<Accounts.ListViewModel>()
                 .AddTransient<Database.FileViewModel>()

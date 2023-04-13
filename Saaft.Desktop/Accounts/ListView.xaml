@@ -2,9 +2,12 @@
         x:Class="Saaft.Desktop.Accounts.ListView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:Accounts="clr-namespace:Saaft.Desktop.Accounts"
+        xmlns:Behaviors="clr-namespace:Saaft.Desktop.Behaviors"
+        xmlns:Workspaces="clr-namespace:Saaft.Desktop.Workspaces"
         mc:Ignorable="d" 
         d:DataContext="{d:DesignInstance Type=Accounts:ListViewModel}">
 
@@ -13,7 +16,19 @@
             <HierarchicalDataTemplate
                     DataType="{x:Type Accounts:ListViewItemModel}"
                     ItemsSource="{Binding Children.Value}">
-                <TextBlock Text="{Binding Name.Value}" />
+                <TextBlock Text="{Binding Name.Value}">
+                    <TextBlock.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="New" Command="{Binding CreateChildCommand, Mode=OneTime}">
+                                <b:Interaction.Behaviors>
+                                    <Behaviors:ReactiveCommandSourceBehavior
+                                        Command="{x:Static Workspaces:Commands.Interrupt}"
+                                        Source="{Binding InterruptRequested, Mode=OneTime}"/>
+                                </b:Interaction.Behaviors>
+                            </MenuItem>
+                        </ContextMenu>
+                    </TextBlock.ContextMenu>
+                </TextBlock>
             </HierarchicalDataTemplate> 
         </TreeView.ItemTemplate>
     </TreeView>

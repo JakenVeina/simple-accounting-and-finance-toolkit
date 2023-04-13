@@ -9,8 +9,28 @@ namespace System.Windows.Input
         public static ReactiveCommand<Unit> Create(Action onExecuted)
             => new(
                 onExecuted:         Observer.Create<Unit>(_ => onExecuted.Invoke()),
-                canExecute:         Observable.Return(true),
-                parameterConverter: _ => default);
+                canExecute:         _canExecuteTrue,
+                parameterConverter: _convertUnit);
+
+        public static ReactiveCommand<Unit> Create(IObserver<Unit> onExecuted)
+            => new(
+                onExecuted:         onExecuted,
+                canExecute:         _canExecuteTrue,
+                parameterConverter: _convertUnit);
+    
+        public static ReactiveCommand<Unit> Create(
+                IObserver<Unit>     onExecuted,
+                IObservable<bool>   canExecute)
+            => new(
+                onExecuted:         onExecuted,
+                canExecute:         canExecute,
+                parameterConverter: _convertUnit);
+
+        private static readonly IObservable<bool> _canExecuteTrue
+            = Observable.Return(true);
+
+        private static readonly Func<object?, Unit> _convertUnit
+            = _ => default;
     }
 
     public sealed class ReactiveCommand<T>

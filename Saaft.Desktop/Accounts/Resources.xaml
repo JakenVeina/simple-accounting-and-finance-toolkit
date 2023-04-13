@@ -3,6 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:Accounts="clr-namespace:Saaft.Desktop.Accounts">
     
-    <DataTemplate DataType="{x:Type Accounts:ListViewModel}"><Accounts:ListView/></DataTemplate>
+    <DataTemplate DataType="{x:Type Accounts:FormWorkspaceModel}">  <Accounts:FormWorkspace/>   </DataTemplate>
+    <DataTemplate DataType="{x:Type Accounts:ListViewModel}">       <Accounts:ListView/>        </DataTemplate>
+
+    <DataTemplate DataType="Accounts:NameExistsError"><TextBlock>A value is required.</TextBlock></DataTemplate>
     
 </ResourceDictionary>
