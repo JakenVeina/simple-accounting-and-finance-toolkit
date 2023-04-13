@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Saaft.Common\Saaft.Common.csproj" />
+    <ProjectReference Include="..\Saaft.Data\Saaft.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

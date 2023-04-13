@@ -6,6 +6,11 @@ namespace System.ComponentModel
     public abstract class ReactiveProperty
         : INotifyPropertyChanged
     {
+        public static ReactiveProperty<T?> Create<T>(IObservable<T?> source)
+            => new(
+                initialValue:   default,
+                source:         source);
+
         public static ReactiveProperty<T> CreateStatic<T>(T value)
             => new(
                 initialValue:   value,
@@ -43,7 +48,7 @@ namespace System.ComponentModel
         : ReactiveProperty,
             IObservable<T>
     {
-        public ReactiveProperty(
+        internal ReactiveProperty(
             T               initialValue,
             IObservable<T>  source)
         {

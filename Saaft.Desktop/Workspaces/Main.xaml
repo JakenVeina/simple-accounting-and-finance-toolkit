@@ -8,6 +8,14 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=Workspaces:MainModel}">
     
-    <TextBlock>Hello World!</TextBlock>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Command="{Binding NewFileCommand}"/>
+            </MenuItem>
+        </Menu>
+        
+        <ContentControl Content="{Binding File.Value}"/>
+    </DockPanel>
 
 </UserControl>
