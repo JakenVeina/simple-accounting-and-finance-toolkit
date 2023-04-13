@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33516.290
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9519BFF0-94FA-4931-AA9D-AFDF18164678}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+		LICENSE.txt = LICENSE.txt
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Saaft.Desktop", "Saaft.Desktop\Saaft.Desktop.csproj", "{4B4F25D6-B876-49D8-98B9-8C485F9817D9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Saaft.Common", "Saaft.Common\Saaft.Common.csproj", "{67A55DB9-D9E5-4298-B8FF-81B918E42BCE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4B4F25D6-B876-49D8-98B9-8C485F9817D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B4F25D6-B876-49D8-98B9-8C485F9817D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B4F25D6-B876-49D8-98B9-8C485F9817D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B4F25D6-B876-49D8-98B9-8C485F9817D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67A55DB9-D9E5-4298-B8FF-81B918E42BCE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67A55DB9-D9E5-4298-B8FF-81B918E42BCE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67A55DB9-D9E5-4298-B8FF-81B918E42BCE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67A55DB9-D9E5-4298-B8FF-81B918E42BCE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8BECC500-B77F-4DFD-9B5E-02ABAD9544CC}
+	EndGlobalSection
+EndGlobal

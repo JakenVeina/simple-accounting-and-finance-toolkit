@@ -1,0 +1,16 @@
+﻿<!-- ShutdownMode setting here is redundant, but necessary as a workaround for https://github.com/dotnet/wpf/issues/7702 -->
+<Application
+        x:Class="Saaft.Desktop.EntryPoint"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        ShutdownMode="OnLastWindowClose">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Workspaces/Resources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+</Application>

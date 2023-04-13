@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <!-- Override package versions across all projects that use them -->
+  <ItemGroup>
+    <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="7.0.0"   />
+    <PackageReference Update="Microsoft.Xaml.Behaviors.Wpf"             Version="1.1.39"  />
+    <PackageReference Update="System.Reactive"                          Version="5.0.0"   />
+  </ItemGroup>
+
+</Project>
