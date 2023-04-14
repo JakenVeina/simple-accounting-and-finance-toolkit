@@ -26,6 +26,13 @@
                                         Source="{Binding InterruptRequested, Mode=OneTime}"/>
                                 </b:Interaction.Behaviors>
                             </MenuItem>
+                            <MenuItem Header="Edit" Command="{Binding EditCommand, Mode=OneTime}">
+                                <b:Interaction.Behaviors>
+                                    <Behaviors:ReactiveCommandSourceBehavior
+                                        Command="{x:Static Workspaces:Commands.Interrupt}"
+                                        Source="{Binding InterruptRequested, Mode=OneTime}"/>
+                                </b:Interaction.Behaviors>
+                            </MenuItem>
                         </ContextMenu>
                     </TextBlock.ContextMenu>
                 </TextBlock>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
@@ -8,7 +9,6 @@ using System.Reactive.Subjects;
 using System.Reflection;
 using System.Windows.Input;
 
-using Saaft.Data;
 using Saaft.Data.Accounts;
 using Saaft.Desktop.Validation;
 
@@ -19,51 +19,16 @@ namespace Saaft.Desktop.Accounts
             IDisposable
     {
         public FormWorkspaceModel(
-                    DataStore       dataStore,
-                    Repository      repository,
-                    CreationModel   model)
-                : this(
-                    dataStore:          dataStore,
-                    repository:         repository,
-                    parentAccountId:    model.ParentAccountId,
-                    description:        model.Description,
-                    name:               model.Name,
-                    title:              ReactiveProperty.Create("Create New Account"),
-                    type:               model.Type)
-            => _saveRequested
-                .WithLatestFrom(_description,           (_, description) => description)
-                .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
-                .Select(@params => model with
-                {
-                    Description = @params.description,
-                    Name        = @params.name
-                })
-                .ApplyOperation(repository.Create)
-                .Subscribe()
-                .DisposeWith(_subscriptions);
-
-        private FormWorkspaceModel(
-            DataStore                   dataStore,
-            Repository                  repository,
-            long?                       parentAccountId,
-            string?                     description,
-            string?                     name,
-            ReactiveProperty<string>    title,
-            Data.Accounts.Type          type)
+            Repository      repository,
+            CreationModel   model)
         {
-            _description    = new(description);
+            _description    = new(model.Description);
+            _saveRequested  = new();
             _subscriptions  = new();
-            _title          = title;
-            _type           = type;
-
-            var versions = dataStore
-                .WhereNotNull()
-                .Select(file => file.Database.AccountVersions)
-                .DistinctUntilChanged()
-                .ShareReplay(1);
+            _type           = model.Type;
 
             _name = new(
-                initialValue:   name,
+                initialValue:   model.Name,
                 errorsFactory:  name => Observable.CombineLatest(
                     name,
                     repository.CurrentVersions,
@@ -78,21 +43,91 @@ namespace Saaft.Desktop.Accounts
                         _   => Array.Empty<object?>()
                     }));
 
-            _parentName = ((parentAccountId is null)
-                    ? Observable.Return<string?>(null)
-                    : repository.CurrentVersions
+            _parentName = ((model.ParentAccountId is long parentAccountId)
+                    ? repository.CurrentVersions
                         .Select(versions => versions
-                            .Where(version => version.AccountId == parentAccountId.Value)
+                            .Where(version => version.AccountId == parentAccountId)
                             .Select(version => version.Name)
-                            .FirstOrDefault()))
+                            .FirstOrDefault())
+                    : Observable.Return<string?>(null))
                 .ToReactiveProperty();
-
-            _saveRequested = new();
 
             _saveCommand = ReactiveCommand.Create(
                 onExecuted: _saveRequested,
                 canExecute: _name.HasErrors
                     .Select(hasErrors => !hasErrors));
+
+            _title = ReactiveProperty.Create("Create New Account");
+
+            _saveRequested
+                .WithLatestFrom(_description,           (_, description) => description)
+                .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
+                .Select(@params => model with
+                {
+                    Description = @params.description,
+                    Name        = @params.name
+                })
+                .ApplyOperation(repository.Create)
+                .Subscribe()
+                .DisposeWith(_subscriptions);
+        }
+
+        public FormWorkspaceModel(
+            Repository      repository,
+            MutationModel   model)
+        {
+            _description    = new(model.Description);
+            _saveRequested  = new();
+            _subscriptions  = new();
+            _type           = model.Type;
+
+            _name = new(
+                initialValue:   model.Name,
+                errorsFactory:  name => Observable.CombineLatest(
+                    name,
+                    repository.CurrentVersions,
+                    (name, versions) => name switch
+                    {
+                        _ when string.IsNullOrWhiteSpace(name)
+                            => new[] { ValueIsRequiredError.Default },
+                        _ when versions
+                                .Where(version => version.AccountId != model.AccountId)
+                                .Select(version => version.Name)
+                                .Contains(name)
+                            => new[] { new NameExistsError() { Name = name } },
+                        _   => Array.Empty<object?>()
+                    }));
+
+            _parentName = ((model.ParentAccountId is long parentAccountId)
+                    ? repository.CurrentVersions
+                        .Select(versions => versions
+                            .Where(version => version.AccountId == parentAccountId)
+                            .Select(version => version.Name)
+                            .FirstOrDefault())
+                    : Observable.Return<string?>(null))
+                .ToReactiveProperty();
+
+            _saveCommand = ReactiveCommand.Create(
+                onExecuted: _saveRequested,
+                canExecute: Observable.CombineLatest(
+                    _description.Select(description => description != model.Description),
+                    _name.Select(name => name != model.Name),
+                    _name.HasErrors,
+                    (isDescriptionDirty, isNameDirty, nameHasErrors) => (isDescriptionDirty || isNameDirty) && (!nameHasErrors)));
+
+            _title = ReactiveProperty.Create("Edit Account");
+
+            _saveRequested
+                .WithLatestFrom(_description,           (_, description) => description)
+                .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
+                .Select(@params => model with
+                {
+                    Description = @params.description,
+                    Name        = @params.name
+                })
+                .ApplyOperation(repository.Mutate)
+                .Subscribe()
+                .DisposeWith(_subscriptions);
         }
 
         public ObservableProperty<string?> Description

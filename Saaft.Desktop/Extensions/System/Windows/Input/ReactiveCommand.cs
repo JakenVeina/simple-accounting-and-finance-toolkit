@@ -6,17 +6,31 @@ namespace System.Windows.Input
 {
     public static class ReactiveCommand
     {
+        static ReactiveCommand()
+        {
+            _canAlwaysExecute = Observable.Return(true);
+            
+            _selectUnit = _ => default;
+
+            NotSupported = new(
+                onExecuted:         Observer.Create<Unit>(_ => { }),
+                canExecute:         Observable.Return(false),
+                parameterConverter: _selectUnit);
+        }
+
+        public static readonly ReactiveCommand<Unit> NotSupported;
+
         public static ReactiveCommand<Unit> Create(Action onExecuted)
             => new(
                 onExecuted:         Observer.Create<Unit>(_ => onExecuted.Invoke()),
-                canExecute:         _canExecuteTrue,
-                parameterConverter: _convertUnit);
+                canExecute:         _canAlwaysExecute,
+                parameterConverter: _selectUnit);
 
         public static ReactiveCommand<Unit> Create(IObserver<Unit> onExecuted)
             => new(
                 onExecuted:         onExecuted,
-                canExecute:         _canExecuteTrue,
-                parameterConverter: _convertUnit);
+                canExecute:         _canAlwaysExecute,
+                parameterConverter: _selectUnit);
     
         public static ReactiveCommand<Unit> Create(
                 IObserver<Unit>     onExecuted,
@@ -24,13 +38,11 @@ namespace System.Windows.Input
             => new(
                 onExecuted:         onExecuted,
                 canExecute:         canExecute,
-                parameterConverter: _convertUnit);
+                parameterConverter: _selectUnit);
 
-        private static readonly IObservable<bool> _canExecuteTrue
-            = Observable.Return(true);
+        private static readonly IObservable<bool> _canAlwaysExecute;
 
-        private static readonly Func<object?, Unit> _convertUnit
-            = _ => default;
+        private static readonly Func<object?, Unit> _selectUnit;
     }
 
     public sealed class ReactiveCommand<T>

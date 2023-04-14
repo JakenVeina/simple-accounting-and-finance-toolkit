@@ -62,24 +62,43 @@ namespace Saaft.Data.Accounts
                 .WithLatestFrom(_currentFile,   (model, currentFile) => (model, currentFile))
                 .WithLatestFrom(_maxAccountId,  (@params, maxAccountId) => (@params.model, @params.currentFile, maxAccountId))
                 .WithLatestFrom(_maxVersionId,  (@params, maxVersionId) => (@params.model, @params.currentFile, @params.maxAccountId, maxVersionId))
-                .Do(@params =>
+                .Do(@params => _dataStore.Value = @params.currentFile with
                 {
-                    _dataStore.Value = @params.currentFile with
+                    Database = @params.currentFile.Database with
                     {
-                        Database = @params.currentFile.Database with
-                        {
-                            AccountVersions = @params.currentFile.Database.AccountVersions
-                                .Add(new()
-                                { 
-                                    AccountId           = @params.maxAccountId + 1,
-                                    Description         = @params.model.Description,
-                                    Id                  = @params.maxVersionId + 1,
-                                    Name                = @params.model.Name!,
-                                    ParentAccountId     = @params.model.ParentAccountId,
-                                    Type                = @params.model.Type
-                                })
-                        }
-                    };
+                        AccountVersions = @params.currentFile.Database.AccountVersions
+                            .Add(new()
+                            { 
+                                AccountId           = @params.maxAccountId + 1,
+                                Description         = @params.model.Description,
+                                Id                  = @params.maxVersionId + 1,
+                                Name                = @params.model.Name,
+                                ParentAccountId     = @params.model.ParentAccountId,
+                                Type                = @params.model.Type
+                            })
+                    }
+                })
+                .Select(_ => default(Unit));
+
+        public IObservable<Unit> Mutate(IObservable<MutationModel> mutateRequested)
+            => mutateRequested
+                .WithLatestFrom(_currentFile,       (model, currentFile) => (model, currentFile))
+                .WithLatestFrom(_currentVersions,   (@params, currentVersions) => (@params.model, @params.currentFile, currentVersion: currentVersions.First(version => version.AccountId == @params.model.AccountId)))
+                .WithLatestFrom(_maxVersionId,      (@params, maxVersionId) => (@params.model, @params.currentFile, @params.currentVersion, maxVersionId))
+                .Do(@params => _dataStore.Value = @params.currentFile with
+                {
+                    Database = @params.currentFile.Database with
+                    {
+                        AccountVersions = @params.currentFile.Database.AccountVersions
+                            .Replace(@params.currentVersion, @params.currentVersion with
+                            {
+                                Description         = @params.model.Description,
+                                Id                  = @params.maxVersionId + 1,
+                                Name                = @params.model.Name,
+                                ParentAccountId     = @params.model.ParentAccountId,
+                                Type                = @params.model.Type
+                            })
+                    }
                 })
                 .Select(_ => default(Unit));
 
