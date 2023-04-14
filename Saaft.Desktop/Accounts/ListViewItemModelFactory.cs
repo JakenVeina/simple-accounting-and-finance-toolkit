@@ -6,28 +6,28 @@ namespace Saaft.Desktop.Accounts
     public class ListViewItemModelFactory
     {
         public ListViewItemModelFactory(
-            DataStore                   dataStore,
-            FormWorkspaceModelFactory   formWorkspaceFactory)
+            FormWorkspaceModelFactory   formWorkspaceFactory,
+            Repository                  repository)
         {
-            _dataStore              = dataStore;
             _formWorkspaceFactory   = formWorkspaceFactory;
+            _repository             = repository;
         }
 
         public ListViewItemModel Create(long accountId)
             => new(
-                dataStore:              _dataStore,
-                itemFactory:            this,
                 formWorkspaceFactory:   _formWorkspaceFactory,
+                itemFactory:            this,
+                repository:             _repository,
                 accountId:              accountId);
 
         public ListViewItemModel Create(Type type)
             => new(
-                dataStore:              _dataStore,
-                itemViewFactory:        this,
                 formWorkspaceFactory:   _formWorkspaceFactory,
+                itemFactory:            this,
+                repository:             _repository,
                 type:                   type);
 
-        private readonly DataStore                  _dataStore;
         private readonly FormWorkspaceModelFactory  _formWorkspaceFactory;
+        private readonly Repository                 _repository;
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace Saaft.Data.Accounts
 {
-    public class CreationModel
+    public record CreationModel
     {
         public long? ParentAccountId { get; set; }
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
@@ -9,7 +8,6 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows.Input;
 
-using Saaft.Data;
 using Saaft.Data.Accounts;
 
 namespace Saaft.Desktop.Accounts
@@ -18,31 +16,23 @@ namespace Saaft.Desktop.Accounts
         : IDisposable
     {
         public ListViewItemModel(
-            DataStore                   dataStore,
-            ListViewItemModelFactory    itemFactory,
             FormWorkspaceModelFactory   formWorkspaceFactory,
+            ListViewItemModelFactory    itemFactory,
+            Repository                  repository,
             long                        accountId)
         {
             _subscriptions = new();
 
             _interruptRequested = new();
 
-            var currentVersion = dataStore
-                .Select(file => file?.Database.AccountVersions ?? ImmutableList<VersionEntity>.Empty)
-                .DistinctUntilChanged()
-                .Select(versions => versions
-                    .Where(version => versions
-                        .All(nextVersion => nextVersion.PreviousVersionId != version.Id))
-                    .Single(version => version.AccountId == accountId))
+            var currentVersion = repository.CurrentVersions
+                .Select(versions => versions.Single(version => version.AccountId == accountId))
                 .DistinctUntilChanged()
                 .ShareReplay(1);
 
-            _children = dataStore
-                .Select(file => file?.Database.AccountVersions ?? ImmutableList<VersionEntity>.Empty)
-                .DistinctUntilChanged()
+            _children = repository.CurrentVersions
                 .Select(versions => versions
-                    .Where(version => (version.ParentAccountId == accountId)
-                        && versions.All(nextVersion => nextVersion.PreviousVersionId != version.Id))
+                    .Where(version => version.ParentAccountId == accountId)
                     .OrderBy(version => version.Name)
                     .Select(version => version.AccountId)
                     .ToList())
@@ -72,25 +62,23 @@ namespace Saaft.Desktop.Accounts
         }
 
         public ListViewItemModel(
-            DataStore                   dataStore,
-            ListViewItemModelFactory    itemViewFactory,
             FormWorkspaceModelFactory   formWorkspaceFactory,
+            ListViewItemModelFactory    itemFactory,
+            Repository                  repository,
             Data.Accounts.Type          type)
         {
             _interruptRequested = new();
 
-            _children = dataStore
-                .Select(file => file?.Database.AccountVersions ?? ImmutableList<VersionEntity>.Empty)
-                .DistinctUntilChanged()
+            _children = repository.CurrentVersions
                 .Select(versions => versions
                     .Where(version => (version.Type == type)
-                        && versions.All(nextVersion => nextVersion.PreviousVersionId != version.Id))
+                        && (version.ParentAccountId is null))
                     .OrderBy(version => version.Name)
                     .Select(version => version.AccountId)
                     .ToList())
                 .DistinctUntilChanged(SequenceEqualityComparer<long>.Default)
                 .Select(accountIds => accountIds
-                    .Select(itemViewFactory.Create)
+                    .Select(itemFactory.Create)
                     .ToList())
                 .ToReactiveProperty(Array.Empty<ListViewItemModel>().AsReadOnlyList());
 

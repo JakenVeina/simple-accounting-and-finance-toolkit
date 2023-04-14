@@ -2,8 +2,10 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reflection;
 using System.Windows.Input;
 
 using Saaft.Data;
@@ -17,27 +19,41 @@ namespace Saaft.Desktop.Accounts
             IDisposable
     {
         public FormWorkspaceModel(
-                DataStore       dataStore,
-                CreationModel   initialState)
-            : this(
-                dataStore:          dataStore,
-                accountId:          null,
-                parentAccountId:    initialState.ParentAccountId,
-                description:        initialState.Description,
-                name:               initialState.Name,
-                type:               initialState.Type)
-        { }
+                    DataStore       dataStore,
+                    Repository      repository,
+                    CreationModel   model)
+                : this(
+                    dataStore:          dataStore,
+                    repository:         repository,
+                    parentAccountId:    model.ParentAccountId,
+                    description:        model.Description,
+                    name:               model.Name,
+                    title:              ReactiveProperty.Create("Create New Account"),
+                    type:               model.Type)
+            => _saveRequested
+                .WithLatestFrom(_description,           (_, description) => description)
+                .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
+                .Select(@params => model with
+                {
+                    Description = @params.description,
+                    Name        = @params.name
+                })
+                .ApplyOperation(repository.Create)
+                .Subscribe()
+                .DisposeWith(_subscriptions);
 
         private FormWorkspaceModel(
-            DataStore           dataStore,
-            long?               accountId,
-            long?               parentAccountId,
-            string?             description,
-            string?             name,
-            Data.Accounts.Type  type)
+            DataStore                   dataStore,
+            Repository                  repository,
+            long?                       parentAccountId,
+            string?                     description,
+            string?                     name,
+            ReactiveProperty<string>    title,
+            Data.Accounts.Type          type)
         {
-            _accountId      = accountId;
             _description    = new(description);
+            _subscriptions  = new();
+            _title          = title;
             _type           = type;
 
             var versions = dataStore
@@ -48,77 +64,35 @@ namespace Saaft.Desktop.Accounts
 
             _name = new(
                 initialValue:   name,
-                errorsFactory:  name => Observable.CombineLatest(name, versions, (name, versions) => name switch
-                {
-                    _ when string.IsNullOrWhiteSpace(name)
-                        => new[] { ValueIsRequiredError.Default },
-                    _ when versions
-                            .Where(version => versions.All(nextVersion => nextVersion.PreviousVersionId != version.Id))
-                            .Select(version => version.Name)
-                            .Contains(name)
-                        => new[] { new NameExistsError() { Name = name! } },
-                    _   => Array.Empty<object?>()
-                }));
+                errorsFactory:  name => Observable.CombineLatest(
+                    name,
+                    repository.CurrentVersions,
+                    (name, versions) => name switch
+                    {
+                        _ when string.IsNullOrWhiteSpace(name)
+                            => new[] { ValueIsRequiredError.Default },
+                        _ when versions
+                                .Select(version => version.Name)
+                                .Contains(name)
+                            => new[] { new NameExistsError() { Name = name } },
+                        _   => Array.Empty<object?>()
+                    }));
 
             _parentName = ((parentAccountId is null)
                     ? Observable.Return<string?>(null)
-                    : versions
+                    : repository.CurrentVersions
                         .Select(versions => versions
-                            .FirstOrDefault(version => (version.AccountId == parentAccountId.Value)
-                                && versions.All(nextVersion => nextVersion.PreviousVersionId != version.Id))
-                            ?.Name))
+                            .Where(version => version.AccountId == parentAccountId.Value)
+                            .Select(version => version.Name)
+                            .FirstOrDefault()))
                 .ToReactiveProperty();
 
             _saveRequested = new();
-            _saveCommand = ReactiveCommand.Create(
-                onExecuted: Observer.Create<Unit>(_ => 
-                {
-                    var previousVersion = (_accountId is long accountid)
-                        ? dataStore.Value!.Database.AccountVersions.Find(version => (version.AccountId == accountid)
-                            && dataStore.Value.Database.AccountVersions.All(nextVersion => nextVersion.PreviousVersionId != version.Id))
-                        : null;
 
-                    dataStore.Value = dataStore.Value! with
-                    {
-                        Database = dataStore.Value.Database with
-                        {
-                            AccountVersions = (previousVersion is null)
-                                ? dataStore.Value.Database.AccountVersions
-                                    .Add(new()
-                                    {
-                                        AccountId           = dataStore.Value.Database.AccountVersions
-                                            .DefaultIfEmpty()
-                                            .Max(version => version?.AccountId ?? 0) + 1,
-                                        //CreationId
-                                        Description         = _description.Value!,
-                                        Id                  = dataStore.Value.Database.AccountVersions
-                                            .DefaultIfEmpty()
-                                            .Max(version => version?.Id ?? 0) + 1,
-                                        Name                = _name.Value!,
-                                        ParentAccountId     = parentAccountId,
-                                        Type                = _type
-                                    })
-                                : dataStore.Value.Database.AccountVersions
-                                    .Replace(previousVersion, previousVersion with
-                                    {
-                                        //CreationId
-                                        Description         = _description.Value!,
-                                        Id                  = dataStore.Value.Database.AccountVersions
-                                            .DefaultIfEmpty()
-                                            .Max(version => version?.Id ?? 0) + 1,
-                                        Name                = _name.Value!,
-                                        PreviousVersionId   = previousVersion.Id,
-                                    })
-                        },
-                    };
-                }),
+            _saveCommand = ReactiveCommand.Create(
+                onExecuted: _saveRequested,
                 canExecute: _name.HasErrors
                     .Select(hasErrors => !hasErrors));
-
-            _title = Observable.Empty<string>()
-                .ToReactiveProperty((accountId is null)
-                    ? "Create New Account"
-                    : "Edit Account");
         }
 
         public ObservableProperty<string?> Description
@@ -144,14 +118,15 @@ namespace Saaft.Desktop.Accounts
             _description.Dispose();
             _name.Dispose();
             _saveRequested.Dispose();
+            _subscriptions.Dispose();
         }
 
-        private readonly long?                          _accountId;
         private readonly ObservableProperty<string?>    _description;
         private readonly ObservableProperty<string?>    _name;
         private readonly ReactiveProperty<string?>      _parentName;
         private readonly ReactiveCommand<Unit>          _saveCommand;
         private readonly Subject<Unit>                  _saveRequested;
+        private readonly CompositeDisposable            _subscriptions;
         private readonly ReactiveProperty<string>       _title;
         private readonly Data.Accounts.Type             _type;
     }
