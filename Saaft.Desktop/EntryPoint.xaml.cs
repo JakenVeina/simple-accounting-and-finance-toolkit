@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 
 using Microsoft.Extensions.DependencyInjection;
+
 using Saaft.Data;
 
 namespace Saaft.Desktop
@@ -11,13 +12,13 @@ namespace Saaft.Desktop
         protected override void OnStartup(StartupEventArgs e)
         {
             _serviceProvider = new ServiceCollection()
-                .AddSingleton<DataStore>()
-                .AddTransient<Accounts.FormWorkspaceModelFactory>()
-                .AddTransient<Accounts.ListViewItemModelFactory>()
-                .AddTransient<Accounts.ListViewModel>()
-                .AddTransient<Database.FileViewModel>()
-                .AddTransient<Workspaces.MainModel>()
-                .BuildServiceProvider();
+                .AddSaaftData()
+                .AddSaaftDesktop()
+                .BuildServiceProvider(new ServiceProviderOptions()
+                {
+                    ValidateOnBuild = true,
+                    ValidateScopes  = true
+                });
 
             _hostWindow = new Workspaces.Window()
             {
