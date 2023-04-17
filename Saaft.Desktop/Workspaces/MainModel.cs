@@ -14,13 +14,15 @@ namespace Saaft.Desktop.Workspaces
         : ModelBase
     {
         public MainModel(
-            DataStore       dataStore,
-            FileViewModel   file)
+            DataStore               dataStore,
+            Database.ModelFactory   modelFactory)
         {
             _file = dataStore
-                .Select(dataFile => (dataFile is null)
-                    ? null
-                    : file)
+                .Select(file => file is not null)
+                .DistinctUntilChanged()
+                .Select(isFileOpen => isFileOpen
+                    ? modelFactory.CreateFileView()
+                    : null)
                 .ToReactiveProperty();
 
             _newFileCommand = ReactiveCommand.Create(() => dataStore.Value = FileEntity.New);

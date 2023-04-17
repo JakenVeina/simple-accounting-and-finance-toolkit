@@ -11,28 +11,21 @@
         mc:Ignorable="d" 
         d:DataContext="{d:DesignInstance Type=Accounts:ListViewModel}">
 
-    <TreeView ItemsSource="{Binding AccountTypes, Mode=OneTime}">
+    <TreeView ItemsSource="{Binding RootItems.Value}">
         <TreeView.ItemTemplate>
             <HierarchicalDataTemplate
                     DataType="{x:Type Accounts:ListViewItemModel}"
                     ItemsSource="{Binding Children.Value}">
                 <TextBlock Text="{Binding Name.Value}">
+                    <b:Interaction.Behaviors>
+                        <Behaviors:ReactiveCommandSourceBehavior
+                            Command="{x:Static Workspaces:Commands.Launch}"
+                            Source="{Binding WorkspaceLaunchRequested, Mode=OneTime}"/>
+                    </b:Interaction.Behaviors>
                     <TextBlock.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="New" Command="{Binding CreateChildCommand, Mode=OneTime}">
-                                <b:Interaction.Behaviors>
-                                    <Behaviors:ReactiveCommandSourceBehavior
-                                        Command="{x:Static Workspaces:Commands.Interrupt}"
-                                        Source="{Binding InterruptRequested, Mode=OneTime}"/>
-                                </b:Interaction.Behaviors>
-                            </MenuItem>
-                            <MenuItem Header="Edit" Command="{Binding EditCommand, Mode=OneTime}">
-                                <b:Interaction.Behaviors>
-                                    <Behaviors:ReactiveCommandSourceBehavior
-                                        Command="{x:Static Workspaces:Commands.Interrupt}"
-                                        Source="{Binding InterruptRequested, Mode=OneTime}"/>
-                                </b:Interaction.Behaviors>
-                            </MenuItem>
+                            <MenuItem Header="New" Command="{Binding CreateChildCommand, Mode=OneTime}"/>
+                            <MenuItem Header="Edit" Command="{Binding EditCommand, Mode=OneTime}"/>
                         </ContextMenu>
                     </TextBlock.ContextMenu>
                 </TextBlock>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reactive.Linq;
 
@@ -7,15 +8,18 @@ namespace Saaft.Desktop.Accounts
 {
     public class ListViewModel
     {
-        public ListViewModel(ListViewItemModelFactory itemFactory)
-            => _accountTypes = Enum.GetValues<Data.Accounts.Type>()
+        public ListViewModel(ModelFactory modelFactory)
+            => _rootItems = Enum.GetValues<Data.Accounts.Type>()
                 .OrderBy(type => type)
-                .Select(itemFactory.Create)
-                .ToList();
+                .Select(type => Observable.Using(
+                    () => modelFactory.CreateListViewItem(type),
+                    item => Observable.Never<ListViewItemModel>().Prepend(item)))
+                .CombineLatest(items => items.ToArray().AsReadOnly())
+                .ToReactiveProperty(Array.Empty<ListViewItemModel>());
 
-        public IReadOnlyList<ListViewItemModel> AccountTypes
-            =>_accountTypes;
+        public ReactiveProperty<IReadOnlyList<ListViewItemModel>> RootItems
+            =>_rootItems;
 
-        private readonly IReadOnlyList<ListViewItemModel> _accountTypes;
+        private readonly ReactiveProperty<IReadOnlyList<ListViewItemModel>> _rootItems;
     }
 }

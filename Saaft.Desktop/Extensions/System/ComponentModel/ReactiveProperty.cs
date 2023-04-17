@@ -63,6 +63,7 @@ namespace System.ComponentModel
 
             _source = source
                 .Do(value => _value = value)
+                .Finally(() => _value = initialValue)
                 .ShareReplay(1);
         }
 
@@ -73,7 +74,7 @@ namespace System.ComponentModel
             => _source.Subscribe(observer);
 
         protected override IDisposable OnSubscribing(PropertyChangedEventHandler handler)
-            => _source.Skip(1).Subscribe(_ => handler.Invoke(this, ValueChangedEventArgs));
+            => _source.Subscribe(_ => handler.Invoke(this, ValueChangedEventArgs));
 
         private readonly IObservable<T> _source;
 

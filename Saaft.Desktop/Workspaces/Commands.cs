@@ -4,9 +4,9 @@ namespace Saaft.Desktop.Workspaces
 {
     public static class Commands
     {
-        public static RoutedCommand Interrupt { get; }
+        public static RoutedCommand Launch { get; }
             = new(
-                name:       nameof(Interrupt),
+                name:       nameof(Launch),
                 ownerType:  typeof(Commands));
     }
 }

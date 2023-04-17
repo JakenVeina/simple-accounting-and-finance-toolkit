@@ -2,7 +2,7 @@
 {
     public static class ReadOnlyListExtensions
     {
-        public static IReadOnlyList<T> AsReadOnlyList<T>(this IReadOnlyList<T> list)
+        public static IReadOnlyList<T> AsReadOnly<T>(this IReadOnlyList<T> list)
             => list;
     }
 }

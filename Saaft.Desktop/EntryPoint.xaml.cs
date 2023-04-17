@@ -22,7 +22,8 @@ namespace Saaft.Desktop
 
             _hostWindow = new Workspaces.Window()
             {
-                DataContext = _serviceProvider.GetRequiredService<Workspaces.MainModel>()
+                DataContext = _serviceProvider.GetRequiredService<Workspaces.ModelFactory>()
+                    .CreateMain()
             };
             _hostWindow.Show();
 

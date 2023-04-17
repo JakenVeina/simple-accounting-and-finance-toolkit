@@ -16,14 +16,12 @@ namespace Saaft.Desktop.Accounts
         : IDisposable
     {
         public ListViewItemModel(
-            FormWorkspaceModelFactory   formWorkspaceFactory,
-            ListViewItemModelFactory    itemFactory,
-            Repository                  repository,
-            long                        accountId)
+            ModelFactory    modelFactory,
+            Repository      repository,
+            long            accountId)
         {
-            _subscriptions = new();
-
-            _interruptRequested = new();
+            _subscriptions              = new();
+            _workspaceLaunchRequested   = new();
 
             var currentVersion = repository.CurrentVersions
                 .Select(versions => versions.Single(version => version.AccountId == accountId))
@@ -38,19 +36,23 @@ namespace Saaft.Desktop.Accounts
                     .ToList())
                 .DistinctUntilChanged(SequenceEqualityComparer<long>.Default)
                 .Select(accountIds => accountIds
-                    .Select(itemFactory.Create)
-                    .ToList())
-                .ToReactiveProperty(Array.Empty<ListViewItemModel>().AsReadOnlyList());
+                    .Select(accountId => Observable.Using(
+                        () => modelFactory.CreateListViewItem(accountId),
+                        child => Observable.Never<ListViewItemModel>().Prepend(child)))
+                    .CombineLatest(children => children.ToArray().AsReadOnly()))
+                .Switch()
+                .ToReactiveProperty(Array.Empty<ListViewItemModel>());
 
             _createChildRequested = new();
             _createChildRequested
                 .WithLatestFrom(currentVersion, (_, currentVersion) => currentVersion)
-                .Subscribe(currentVersion => _interruptRequested.OnNext(formWorkspaceFactory.Create(new CreationModel()
-                {
-                    Name            = $"New {currentVersion.Type} Account",
-                    ParentAccountId = currentVersion.AccountId,
-                    Type            = currentVersion.Type
-                })))
+                .Subscribe(currentVersion => _workspaceLaunchRequested.OnNext(() => modelFactory
+                    .CreateFormWorkspace(new CreationModel()
+                    {
+                        Name            = $"New {currentVersion.Type} Account",
+                        ParentAccountId = currentVersion.AccountId,
+                        Type            = currentVersion.Type
+                    })))
                 .DisposeWith(_subscriptions);
 
             _createChildCommand = ReactiveCommand.Create(_createChildRequested);
@@ -58,14 +60,15 @@ namespace Saaft.Desktop.Accounts
             _editRequested = new();
             _editRequested 
                 .WithLatestFrom(currentVersion, (_, currentVersion) => currentVersion)
-                .Subscribe(currentVersion => _interruptRequested.OnNext(formWorkspaceFactory.Create(new MutationModel()
-                {
-                    AccountId       = currentVersion.AccountId,
-                    Description     = currentVersion.Description,
-                    Name            = currentVersion.Name,
-                    ParentAccountId = currentVersion.AccountId,
-                    Type            = currentVersion.Type
-                })))
+                .Subscribe(currentVersion => _workspaceLaunchRequested.OnNext(() => modelFactory
+                    .CreateFormWorkspace(new MutationModel()
+                    {
+                        AccountId       = currentVersion.AccountId,
+                        Description     = currentVersion.Description,
+                        Name            = currentVersion.Name,
+                        ParentAccountId = currentVersion.AccountId,
+                        Type            = currentVersion.Type
+                    })))
                 .DisposeWith(_subscriptions);
 
             _editCommand = ReactiveCommand.Create(_editRequested);
@@ -77,12 +80,11 @@ namespace Saaft.Desktop.Accounts
         }
 
         public ListViewItemModel(
-            FormWorkspaceModelFactory   formWorkspaceFactory,
-            ListViewItemModelFactory    itemFactory,
-            Repository                  repository,
-            Data.Accounts.Type          type)
+            ModelFactory        modelFactory,
+            Repository          repository,
+            Data.Accounts.Type  type)
         {
-            _interruptRequested = new();
+            _workspaceLaunchRequested = new();
 
             _children = repository.CurrentVersions
                 .Select(versions => versions
@@ -93,15 +95,19 @@ namespace Saaft.Desktop.Accounts
                     .ToList())
                 .DistinctUntilChanged(SequenceEqualityComparer<long>.Default)
                 .Select(accountIds => accountIds
-                    .Select(itemFactory.Create)
-                    .ToList())
-                .ToReactiveProperty(Array.Empty<ListViewItemModel>().AsReadOnlyList());
+                    .Select(accountId => Observable.Using(
+                        () => modelFactory.CreateListViewItem(accountId),
+                        child => Observable.Never<ListViewItemModel>().Prepend(child)))
+                    .CombineLatest(children => children.ToArray()))
+                .Switch()
+                .ToReactiveProperty(Array.Empty<ListViewItemModel>().AsReadOnly());
 
-            _createChildCommand = ReactiveCommand.Create(() => _interruptRequested.OnNext(formWorkspaceFactory.Create(new CreationModel()
-            {
-                Name    = $"New {type} Account",
-                Type    = type
-            })));
+            _createChildCommand = ReactiveCommand.Create(() => _workspaceLaunchRequested.OnNext(() => modelFactory
+                .CreateFormWorkspace(new CreationModel()
+                {
+                    Name    = $"New {type} Account",
+                    Type    = type
+                })));
 
             _editCommand = ReactiveCommand.NotSupported;
 
@@ -117,18 +123,18 @@ namespace Saaft.Desktop.Accounts
         public ReactiveCommand<Unit> EditCommand
             => _editCommand;
 
-        public IObservable<Workspaces.ModelBase> InterruptRequested
-            => _interruptRequested;
-
         public ReactiveProperty<string> Name
             => _name;
 
+        public IObservable<Func<Workspaces.ModelBase>> WorkspaceLaunchRequested
+            => _workspaceLaunchRequested;
+
         public void Dispose()
         {
-            _createChildRequested?.Dispose();
-            _editRequested?.Dispose();
-            _interruptRequested.Dispose();
+            _createChildRequested?.OnCompleted();
+            _editRequested?.OnCompleted();
             _subscriptions?.Dispose();
+            _workspaceLaunchRequested.OnCompleted();
         }
 
         private readonly ReactiveProperty<IReadOnlyList<ListViewItemModel>> _children;
@@ -136,8 +142,8 @@ namespace Saaft.Desktop.Accounts
         private readonly Subject<Unit>?                                     _createChildRequested;
         private readonly ReactiveCommand<Unit>                              _editCommand;
         private readonly Subject<Unit>?                                     _editRequested;
-        private readonly Subject<Workspaces.ModelBase>                      _interruptRequested;
         private readonly ReactiveProperty<string>                           _name;
         private readonly CompositeDisposable?                               _subscriptions;
+        private readonly Subject<Func<Workspaces.ModelBase>>                _workspaceLaunchRequested;
     }
 }

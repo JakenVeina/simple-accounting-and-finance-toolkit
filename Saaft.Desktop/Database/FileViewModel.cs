@@ -10,10 +10,10 @@ namespace Saaft.Desktop.Database
     public class FileViewModel
     {
         public FileViewModel(
-            Accounts.ListViewModel  accountsList,
-            DataStore               dataStore)
+            DataStore               dataStore,
+            Accounts.ModelFactory   modelFactory)
         {
-            _accountsList = accountsList;
+            _accountsList = modelFactory.CreateListView();
 
             _name = dataStore
                 .WhereNotNull()

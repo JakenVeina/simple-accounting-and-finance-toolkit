@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Reflection;
 using System.Windows.Input;
 
 using Saaft.Data.Accounts;
@@ -152,7 +150,7 @@ namespace Saaft.Desktop.Accounts
         {
             _description.Dispose();
             _name.Dispose();
-            _saveRequested.Dispose();
+            _saveRequested.OnCompleted();
             _subscriptions.Dispose();
         }
 

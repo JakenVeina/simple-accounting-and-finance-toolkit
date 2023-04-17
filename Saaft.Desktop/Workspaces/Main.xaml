@@ -11,7 +11,7 @@
         d:DataContext="{d:DesignInstance Type=Workspaces:MainModel}">
     
     <b:Interaction.Behaviors>
-        <Behaviors:LaunchWorkspaceBehavior Command="{x:Static Workspaces:Commands.Interrupt}"/>
+        <Behaviors:LaunchWorkspaceBehavior/>
     </b:Interaction.Behaviors>
     
     <DockPanel>

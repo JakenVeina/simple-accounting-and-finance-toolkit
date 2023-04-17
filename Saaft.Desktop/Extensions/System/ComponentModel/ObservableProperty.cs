@@ -44,7 +44,7 @@ namespace System.ComponentModel
         }
 
         public void Dispose()
-            => _valueSource.Dispose();
+            => _valueSource.OnCompleted();
 
         public IDisposable Subscribe(IObserver<T> observer)
             => _valueSource.Subscribe(observer);

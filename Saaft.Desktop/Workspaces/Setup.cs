@@ -5,6 +5,6 @@ namespace Saaft.Desktop.Workspaces
     public static class Setup
     {
         public static IServiceCollection AddWorkspaces(this IServiceCollection services)
-            => services.AddTransient<MainModel>();
+            => services.AddTransient<ModelFactory>();
     }
 }

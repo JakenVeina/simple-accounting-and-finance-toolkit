@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿using System;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Windows;
 using System.Windows.Input;
 
 using Microsoft.Xaml.Behaviors;
@@ -10,36 +13,30 @@ namespace Saaft.Desktop.Behaviors
     {
         public LaunchWorkspaceBehavior()
         {
-            _commandBinding = new();
+            _commandBinding = new()
+            {
+                Command = Workspaces.Commands.Launch
+            };
             _commandBinding.Executed += (sender, e) =>
             {
-                if (e.Parameter is null)
-                    return;
-
-                new Workspaces.Window()
-                    {
-                        DataContext     = e.Parameter,
-                        SizeToContent   = SizeToContent.WidthAndHeight
-                    }
-                    .ShowDialog();
+                var workspace = ((Func<Workspaces.ModelBase>)e.Parameter).Invoke();
+                try
+                {
+                    new Workspaces.Window()
+                        {
+                            DataContext     = workspace,
+                            SizeToContent   = SizeToContent.WidthAndHeight
+                        }
+                        .ShowDialog();
+                }
+                finally
+                {
+                    if (workspace is IDisposable disposable)
+                        disposable.Dispose();
+                }
             };
             _commandBinding.CanExecute += (sender, e) => e.CanExecute = true;
         }
-
-        public ICommand? Command
-        {
-            get => (ICommand?)GetValue(CommandProperty);
-            set => SetValue(CommandProperty, value);
-        }
-        public static readonly DependencyProperty CommandProperty
-            = DependencyProperty.Register(
-                nameof(Command),
-                typeof(ICommand),
-                typeof(LaunchWorkspaceBehavior),
-                new PropertyMetadata()
-                {
-                    PropertyChangedCallback = (sender, e) => ((LaunchWorkspaceBehavior)sender)._commandBinding.Command = e.NewValue as ICommand
-                });
 
         protected override void OnAttached()
             => AssociatedObject.CommandBindings.Add(_commandBinding);
