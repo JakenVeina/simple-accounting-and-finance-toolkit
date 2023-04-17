@@ -11,9 +11,7 @@ namespace Saaft.Desktop.Accounts
         public ListViewModel(ModelFactory modelFactory)
             => _rootItems = Enum.GetValues<Data.Accounts.Type>()
                 .OrderBy(type => type)
-                .Select(type => Observable.Using(
-                    () => modelFactory.CreateListViewItem(type),
-                    item => Observable.Never<ListViewItemModel>().Prepend(item)))
+                .Select(type => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(type)))
                 .CombineLatest(items => items.ToArray().AsReadOnly())
                 .ToReactiveProperty(Array.Empty<ListViewItemModel>());
 

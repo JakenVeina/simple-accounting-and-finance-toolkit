@@ -36,9 +36,7 @@ namespace Saaft.Desktop.Accounts
                     .ToList())
                 .DistinctUntilChanged(SequenceEqualityComparer<long>.Default)
                 .Select(accountIds => accountIds
-                    .Select(accountId => Observable.Using(
-                        () => modelFactory.CreateListViewItem(accountId),
-                        child => Observable.Never<ListViewItemModel>().Prepend(child)))
+                    .Select(accountId => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(accountId)))
                     .CombineLatest(children => children.ToArray().AsReadOnly()))
                 .Switch()
                 .ToReactiveProperty(Array.Empty<ListViewItemModel>());
@@ -95,9 +93,7 @@ namespace Saaft.Desktop.Accounts
                     .ToList())
                 .DistinctUntilChanged(SequenceEqualityComparer<long>.Default)
                 .Select(accountIds => accountIds
-                    .Select(accountId => Observable.Using(
-                        () => modelFactory.CreateListViewItem(accountId),
-                        child => Observable.Never<ListViewItemModel>().Prepend(child)))
+                    .Select(accountId => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(accountId)))
                     .CombineLatest(children => children.ToArray()))
                 .Switch()
                 .ToReactiveProperty(Array.Empty<ListViewItemModel>().AsReadOnly());
