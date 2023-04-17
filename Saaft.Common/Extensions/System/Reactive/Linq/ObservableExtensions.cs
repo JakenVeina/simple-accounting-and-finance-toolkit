@@ -1,4 +1,6 @@
-﻿namespace System.Reactive.Linq
+﻿using System.Reactive.Subjects;
+
+namespace System.Reactive.Linq
 {
     public static class ObservableExtensions
     {
@@ -14,7 +16,7 @@
 
         public static IObservable<T> ShareReplay<T>(this IObservable<T> source, int bufferSize)
             => source
-                .Replay(bufferSize)
+                .Multicast(new ResettingReplaySubject<T>(bufferSize))
                 .RefCount();
 
         public static IObservable<T> WhereNotNull<T>(this IObservable<T?> source)
