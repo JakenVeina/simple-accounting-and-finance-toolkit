@@ -2,6 +2,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Saaft.Common;
 using Saaft.Data;
 
 namespace Saaft.Desktop
@@ -12,6 +13,7 @@ namespace Saaft.Desktop
         protected override void OnStartup(StartupEventArgs e)
         {
             _serviceProvider = new ServiceCollection()
+                .AddSaaftCommon()
                 .AddSaaftData()
                 .AddSaaftDesktop()
                 .BuildServiceProvider(new ServiceProviderOptions()

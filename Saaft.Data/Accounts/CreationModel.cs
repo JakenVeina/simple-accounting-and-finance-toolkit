@@ -2,7 +2,7 @@
 {
     public record CreationModel
     {
-        public long? ParentAccountId { get; set; }
+        public ulong? ParentAccountId { get; set; }
 
         public string? Description { get; set; }
 

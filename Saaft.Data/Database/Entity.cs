@@ -1,6 +1,5 @@
 ﻿using System.Collections.Immutable;
-
-using Saaft.Data.Accounts;
+using System.Linq;
 
 namespace Saaft.Data.Database
 {
@@ -9,9 +8,20 @@ namespace Saaft.Data.Database
         public static readonly Entity Empty
             = new()
             {
-                AccountVersions = ImmutableList<VersionEntity>.Empty,
+                AccountVersions             = ImmutableList.Create<Accounts.VersionEntity>(),
+                AuditingActionCategories    = ImmutableArray.Create(Accounts.Auditing.ActionCategory),
+                AuditingActions             = ImmutableList.Create<Auditing.AuditedActionEntity>(),
+                AuditingActionTypes         = Enumerable.Empty<Auditing.AuditedActionTypeEntity>()
+                    .Concat(Accounts.Auditing.ActionTypes.Enumerate())
+                    .ToImmutableArray()
             };
 
-        public required ImmutableList<VersionEntity> AccountVersions { get; init; }
+        public required ImmutableList<Accounts.VersionEntity> AccountVersions { get; init; }
+
+        public required ImmutableArray<Auditing.AuditedActionCategoryEntity> AuditingActionCategories { get; init; }
+
+        public required ImmutableList<Auditing.AuditedActionEntity> AuditingActions { get; init; }
+
+        public required ImmutableArray<Auditing.AuditedActionTypeEntity> AuditingActionTypes { get; init; }
     }
 }

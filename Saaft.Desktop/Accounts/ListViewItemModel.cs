@@ -18,7 +18,7 @@ namespace Saaft.Desktop.Accounts
         public ListViewItemModel(
             ModelFactory    modelFactory,
             Repository      repository,
-            long            accountId)
+            ulong           accountId)
         {
             _subscriptions              = new();
             _workspaceLaunchRequested   = new();
@@ -34,7 +34,7 @@ namespace Saaft.Desktop.Accounts
                     .OrderBy(version => version.Name)
                     .Select(version => version.AccountId)
                     .ToList())
-                .DistinctUntilChanged(SequenceEqualityComparer<long>.Default)
+                .DistinctUntilChanged(SequenceEqualityComparer<ulong>.Default)
                 .Select(accountIds => accountIds
                     .Select(accountId => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(accountId)))
                     .CombineLatest(children => children.ToArray().AsReadOnly()))
@@ -91,7 +91,7 @@ namespace Saaft.Desktop.Accounts
                     .OrderBy(version => version.Name)
                     .Select(version => version.AccountId)
                     .ToList())
-                .DistinctUntilChanged(SequenceEqualityComparer<long>.Default)
+                .DistinctUntilChanged(SequenceEqualityComparer<ulong>.Default)
                 .Select(accountIds => accountIds
                     .Select(accountId => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(accountId)))
                     .CombineLatest(children => children.ToArray()))

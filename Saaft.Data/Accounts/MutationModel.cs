@@ -2,9 +2,9 @@
 {
     public record MutationModel
     {
-        public long AccountId { get; set; }
+        public ulong AccountId { get; set; }
 
-        public long? ParentAccountId { get; set; }
+        public ulong? ParentAccountId { get; set; }
 
         public string? Description { get; set; }
 

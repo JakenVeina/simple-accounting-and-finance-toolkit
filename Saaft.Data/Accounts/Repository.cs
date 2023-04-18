@@ -10,9 +10,14 @@ namespace Saaft.Data.Accounts
 {
     public class Repository
     {
-        public Repository(DataStore dataStore)
+        public Repository(
+            Data.Auditing.Repository    auditingRepository,
+            DataStore                   dataStore,
+            SystemClock                 systemClock)
         {
-            _dataStore = dataStore;
+            _auditingRepository = auditingRepository;
+            _dataStore          = dataStore;
+            _systemClock        = systemClock;
 
             _currentFile = dataStore
                 .WhereNotNull()
@@ -29,7 +34,7 @@ namespace Saaft.Data.Accounts
                     .ToList())
                 .DistinctUntilChanged(
                     keySelector:    versions => versions.Select(version => version.Id),
-                    comparer:       SequenceEqualityComparer<long>.Default)
+                    comparer:       SequenceEqualityComparer<ulong>.Default)
                 .ShareReplay(1);
 
             var versions = _currentFile
@@ -37,19 +42,21 @@ namespace Saaft.Data.Accounts
                 .DistinctUntilChanged()
                 .ShareReplay(1);
 
-            _maxAccountId = versions
+            _nextAccountId = versions
                 .Select(versions => versions
                     .Select(version => version.AccountId)
                     .DefaultIfEmpty()
                     .Max())
+                .Select(maxAccountId => maxAccountId + 1)
                 .DistinctUntilChanged()
                 .ShareReplay(1);
 
-            _maxVersionId = versions
+            _nextVersionId = versions
                 .Select(versions => versions
                     .Select(version => version.Id)
                     .DefaultIfEmpty()
                     .Max())
+                .Select(maxVersionId => maxVersionId + 1)
                 .DistinctUntilChanged()
                 .ShareReplay(1);
         }
@@ -59,22 +66,35 @@ namespace Saaft.Data.Accounts
 
         public IObservable<Unit> Create(IObservable<CreationModel> createRequested)
             => createRequested
-                .WithLatestFrom(_currentFile,   (model, currentFile) => (model, currentFile))
-                .WithLatestFrom(_maxAccountId,  (@params, maxAccountId) => (@params.model, @params.currentFile, maxAccountId))
-                .WithLatestFrom(_maxVersionId,  (@params, maxVersionId) => (@params.model, @params.currentFile, @params.maxAccountId, maxVersionId))
-                .Do(@params => _dataStore.Value = @params.currentFile with
+                .WithLatestFrom(
+                    Observable.CombineLatest(
+                        _currentFile,
+                        _nextAccountId,
+                        _nextVersionId,
+                        _auditingRepository.NextActionId,
+                        (currentFile, nextAccountId, nextVersionId, nextActionId) => (currentFile, nextAccountId, nextVersionId, nextActionId)),
+                    (model, state) => (model, state))
+                .Do(@params => _dataStore.Value = @params.state.currentFile with
                 {
-                    Database = @params.currentFile.Database with
+                    Database = @params.state.currentFile.Database with
                     {
-                        AccountVersions = @params.currentFile.Database.AccountVersions
+                        AccountVersions = @params.state.currentFile.Database.AccountVersions
                             .Add(new()
                             { 
-                                AccountId           = @params.maxAccountId + 1,
+                                Id                  = @params.state.nextVersionId,
+                                AccountId           = @params.state.nextAccountId,
+                                CreationId          = @params.state.nextActionId,
                                 Description         = @params.model.Description,
-                                Id                  = @params.maxVersionId + 1,
                                 Name                = @params.model.Name,
                                 ParentAccountId     = @params.model.ParentAccountId,
                                 Type                = @params.model.Type
+                            }),
+                        AuditingActions = @params.state.currentFile.Database.AuditingActions
+                            .Add(new()
+                            {
+                                Id          = @params.state.nextActionId,
+                                Performed   = _systemClock.Now,
+                                TypeId      = Auditing.ActionTypes.AccountCreated.Id
                             })
                     }
                 })
@@ -82,30 +102,51 @@ namespace Saaft.Data.Accounts
 
         public IObservable<Unit> Mutate(IObservable<MutationModel> mutateRequested)
             => mutateRequested
-                .WithLatestFrom(_currentFile,       (model, currentFile) => (model, currentFile))
-                .WithLatestFrom(_currentVersions,   (@params, currentVersions) => (@params.model, @params.currentFile, currentVersion: currentVersions.First(version => version.AccountId == @params.model.AccountId)))
-                .WithLatestFrom(_maxVersionId,      (@params, maxVersionId) => (@params.model, @params.currentFile, @params.currentVersion, maxVersionId))
-                .Do(@params => _dataStore.Value = @params.currentFile with
+                .WithLatestFrom(
+                    Observable.CombineLatest(
+                        _currentFile,
+                        _currentVersions,
+                        _nextVersionId,
+                        _auditingRepository.NextActionId,
+                        (currentFile, currentVersions, nextVersionId, nextActionId) => (currentFile, currentVersions, nextVersionId, nextActionId)),
+                    (model, state) => (model, state))
+                .Do(@params =>
                 {
-                    Database = @params.currentFile.Database with
+                    var currentVersion = @params.state.currentVersions
+                        .First(version => version.AccountId == @params.model.AccountId);
+                    
+                    _dataStore.Value = @params.state.currentFile with
                     {
-                        AccountVersions = @params.currentFile.Database.AccountVersions
-                            .Replace(@params.currentVersion, @params.currentVersion with
-                            {
-                                Description         = @params.model.Description,
-                                Id                  = @params.maxVersionId + 1,
-                                Name                = @params.model.Name,
-                                ParentAccountId     = @params.model.ParentAccountId,
-                                Type                = @params.model.Type
-                            })
-                    }
+                        Database = @params.state.currentFile.Database with
+                        {
+                            AccountVersions = @params.state.currentFile.Database.AccountVersions
+                                .Replace(currentVersion, currentVersion with
+                                {
+                                    Id                  = @params.state.nextVersionId,
+                                    CreationId          = @params.state.nextActionId,
+                                    Description         = @params.model.Description,
+                                    Name                = @params.model.Name,
+                                    ParentAccountId     = @params.model.ParentAccountId,
+                                    Type                = @params.model.Type
+                                }),
+                            AuditingActions = @params.state.currentFile.Database.AuditingActions
+                                .Add(new()
+                                {
+                                    Id          = @params.state.nextActionId,
+                                    Performed   = _systemClock.Now,
+                                    TypeId      = Auditing.ActionTypes.AccountMutated.Id
+                                })
+                        }
+                    };
                 })
                 .Select(_ => default(Unit));
 
+        private readonly Data.Auditing.Repository                   _auditingRepository;
         private readonly IObservable<FileEntity>                    _currentFile;
         private readonly IObservable<IReadOnlyList<VersionEntity>>  _currentVersions;
         private readonly DataStore                                  _dataStore;
-        private readonly IObservable<long>                          _maxAccountId;
-        private readonly IObservable<long>                          _maxVersionId;
+        private readonly IObservable<ulong>                         _nextAccountId;
+        private readonly IObservable<ulong>                         _nextVersionId;
+        private readonly SystemClock                                _systemClock;
     }
 }

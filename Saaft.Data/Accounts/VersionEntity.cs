@@ -2,13 +2,15 @@
 {
     public record VersionEntity
     {
-        public required long Id { get; init; }
+        public required ulong Id { get; init; }
 
-        public required long AccountId { get; init; }
+        public required ulong AccountId { get; init; }
 
-        public long? PreviousVersionId { get; init; }
+        public required ulong CreationId { get; init; }
 
-        public long? ParentAccountId { get; set; }
+        public ulong? PreviousVersionId { get; init; }
+
+        public ulong? ParentAccountId { get; set; }
 
         public string? Description { get; set; }
 

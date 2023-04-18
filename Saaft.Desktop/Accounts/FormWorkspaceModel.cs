@@ -41,7 +41,7 @@ namespace Saaft.Desktop.Accounts
                         _   => Array.Empty<object?>()
                     }));
 
-            _parentName = ((model.ParentAccountId is long parentAccountId)
+            _parentName = ((model.ParentAccountId is ulong parentAccountId)
                     ? repository.CurrentVersions
                         .Select(versions => versions
                             .Where(version => version.AccountId == parentAccountId)
@@ -96,7 +96,7 @@ namespace Saaft.Desktop.Accounts
                         _   => Array.Empty<object?>()
                     }));
 
-            _parentName = ((model.ParentAccountId is long parentAccountId)
+            _parentName = ((model.ParentAccountId is ulong parentAccountId)
                     ? repository.CurrentVersions
                         .Select(versions => versions
                             .Where(version => version.AccountId == parentAccountId)

@@ -19,7 +19,7 @@
             => new(
                 modelFactory: this);
 
-        public ListViewItemModel CreateListViewItem(long accountId)
+        public ListViewItemModel CreateListViewItem(ulong accountId)
             => new(
                 modelFactory:   this,
                 repository:     _repository,
