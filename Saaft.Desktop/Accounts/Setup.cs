@@ -5,6 +5,6 @@ namespace Saaft.Desktop.Accounts
     public static class Setup
     {
         public static IServiceCollection AddAccounts(this IServiceCollection services)
-            => services.AddTransient<ModelFactory>();
+            => services.AddSingleton<ModelFactory>();
     }
 }

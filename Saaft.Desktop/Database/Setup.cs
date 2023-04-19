@@ -5,6 +5,6 @@ namespace Saaft.Desktop.Database
     public static class Setup
     {
         public static IServiceCollection AddDatabase(this IServiceCollection services)
-            => services.AddTransient<ModelFactory>();
+            => services.AddSingleton<ModelFactory>();
     }
 }
