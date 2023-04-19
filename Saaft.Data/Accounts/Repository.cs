@@ -76,7 +76,7 @@ namespace Saaft.Data.Accounts
                     (model, state) => (model, state))
                 .Do(@params => _dataStore.Value = @params.state.currentFile with
                 {
-                    Database = @params.state.currentFile.Database with
+                    Database    = @params.state.currentFile.Database with
                     {
                         AccountVersions = @params.state.currentFile.Database.AccountVersions
                             .Add(new()
@@ -96,7 +96,8 @@ namespace Saaft.Data.Accounts
                                 Performed   = _systemClock.Now,
                                 TypeId      = Auditing.ActionTypes.AccountCreated.Id
                             })
-                    }
+                    },
+                    HasChanges  = true
                 })
                 .Select(_ => default(Unit));
 
@@ -117,7 +118,7 @@ namespace Saaft.Data.Accounts
                     
                     _dataStore.Value = @params.state.currentFile with
                     {
-                        Database = @params.state.currentFile.Database with
+                        Database    = @params.state.currentFile.Database with
                         {
                             AccountVersions = @params.state.currentFile.Database.AccountVersions
                                 .Replace(currentVersion, currentVersion with
@@ -136,7 +137,8 @@ namespace Saaft.Data.Accounts
                                     Performed   = _systemClock.Now,
                                     TypeId      = Auditing.ActionTypes.AccountMutated.Id
                                 })
-                        }
+                        },
+                        HasChanges  = true
                     };
                 })
                 .Select(_ => default(Unit));

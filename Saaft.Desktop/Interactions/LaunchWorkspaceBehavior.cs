@@ -6,7 +6,7 @@ using System.Windows.Input;
 
 using Microsoft.Xaml.Behaviors;
 
-namespace Saaft.Desktop.Behaviors
+namespace Saaft.Desktop.Interactions
 {
     public class LaunchWorkspaceBehavior
         : Behavior<UIElement>

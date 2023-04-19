@@ -34,11 +34,7 @@ namespace Saaft.Desktop.Accounts
                     .OrderBy(version => version.Name)
                     .Select(version => version.AccountId)
                     .ToList())
-                .DistinctUntilChanged(SequenceEqualityComparer<ulong>.Default)
-                .Select(accountIds => accountIds
-                    .Select(accountId => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(accountId)))
-                    .CombineLatest(children => children.ToArray().AsReadOnly()))
-                .Switch()
+                .ApplyOperation(accountIds => ViewAccountIds(accountIds, modelFactory))
                 .ToReactiveProperty(Array.Empty<ListViewItemModel>());
 
             _createChildRequested = new();
@@ -91,12 +87,8 @@ namespace Saaft.Desktop.Accounts
                     .OrderBy(version => version.Name)
                     .Select(version => version.AccountId)
                     .ToList())
-                .DistinctUntilChanged(SequenceEqualityComparer<ulong>.Default)
-                .Select(accountIds => accountIds
-                    .Select(accountId => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(accountId)))
-                    .CombineLatest(children => children.ToArray()))
-                .Switch()
-                .ToReactiveProperty(Array.Empty<ListViewItemModel>().AsReadOnly());
+                .ApplyOperation(accountIds => ViewAccountIds(accountIds, modelFactory))
+                .ToReactiveProperty(Array.Empty<ListViewItemModel>());
 
             _createChildCommand = ReactiveCommand.Create(() => _workspaceLaunchRequested.OnNext(() => modelFactory
                 .CreateFormWorkspace(new CreationModel()
@@ -132,6 +124,18 @@ namespace Saaft.Desktop.Accounts
             _subscriptions?.Dispose();
             _workspaceLaunchRequested.OnCompleted();
         }
+
+        private static IObservable<IReadOnlyList<ListViewItemModel>> ViewAccountIds(
+                IObservable<IReadOnlyList<ulong>>   accountIds,
+                ModelFactory                        modelFactory)
+            => accountIds
+                .DistinctUntilChanged(accountIds => accountIds.AsEnumerable(), SequenceEqualityComparer<ulong>.Default)
+                .Select(accountIds => (accountIds.Count is 0)
+                    ? Observable.Return(Array.Empty<ListViewItemModel>())
+                    : accountIds
+                        .Select(accountId => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(accountId)))
+                        .CombineLatest(children => children.ToArray()))
+                .Switch();
 
         private readonly ReactiveProperty<IReadOnlyList<ListViewItemModel>> _children;
         private readonly ReactiveCommand<Unit>                              _createChildCommand;

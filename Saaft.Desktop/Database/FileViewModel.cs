@@ -1,9 +1,11 @@
 ﻿using System;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 
 using Saaft.Data;
+using Saaft.Data.Database;
 
 namespace Saaft.Desktop.Database
 {
@@ -17,7 +19,13 @@ namespace Saaft.Desktop.Database
 
             _name = dataStore
                 .WhereNotNull()
-                .Select(file => file?.FilePath ?? "Untitled.saaft")
+                .Select(file => string.Concat(
+                    (file.FilePath is null)
+                        ? FileEntity.DefaultFilename
+                        : Path.GetFileName(file.FilePath),
+                    file.HasChanges
+                        ? "*"
+                        : ""))
                 .DistinctUntilChanged()
                 .ToReactiveProperty();
         }

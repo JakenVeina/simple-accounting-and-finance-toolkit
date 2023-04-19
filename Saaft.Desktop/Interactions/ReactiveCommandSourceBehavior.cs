@@ -4,7 +4,7 @@ using System.Windows.Input;
 
 using Microsoft.Xaml.Behaviors;
 
-namespace Saaft.Desktop.Behaviors
+namespace Saaft.Desktop.Interactions
 {
     public class ReactiveCommandSourceBehavior
         : Behavior<DependencyObject>

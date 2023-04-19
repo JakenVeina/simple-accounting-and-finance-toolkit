@@ -1,8 +1,8 @@
 ﻿namespace Saaft.Desktop.Workspaces
 {
-    public partial class Main
+    public partial class MainWorkspace
     {
-        public Main()
+        public MainWorkspace()
             => InitializeComponent();
     }
 }

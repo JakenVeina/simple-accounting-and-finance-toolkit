@@ -1,0 +1,37 @@
+﻿<UserControl
+        x:Class="Saaft.Desktop.Workspaces.MainWorkspace"
+        xmlns="http://schemas.microsoft.com/netfx/2009/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:Interactions="clr-namespace:Saaft.Desktop.Interactions"
+        xmlns:Workspaces="clr-namespace:Saaft.Desktop.Workspaces"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=Workspaces:MainWorkspaceModel}">
+    
+    <b:Interaction.Behaviors>
+        <Interactions:LaunchWorkspaceBehavior/>
+    </b:Interaction.Behaviors>
+    
+    <b:Interaction.Triggers>
+        <Interactions:ReactiveTrigger Source="{Binding PromptRequested}">
+            <b:InvokeCommandAction
+                Command="{x:Static Workspaces:Commands.Prompt}"
+                PassEventArgsToCommand="True"/>
+        </Interactions:ReactiveTrigger>
+    </b:Interaction.Triggers>
+    
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Command="{Binding NewFileCommand}"/>
+                <MenuItem Header="_Open" Command="{Binding OpenFileCommand}"/>
+                <MenuItem Header="_Save" Command="{Binding SaveFileCommand}"/>
+            </MenuItem>
+        </Menu>
+        
+        <ContentControl Content="{Binding File.Value}"/>
+    </DockPanel>
+
+</UserControl>

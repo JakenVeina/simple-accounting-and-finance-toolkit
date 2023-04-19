@@ -4,12 +4,19 @@
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:Behaviors="clr-namespace:Saaft.Desktop.Behaviors"
+        xmlns:Behaviors="clr-namespace:Saaft.Desktop.Interactions"
         xmlns:Workspaces="clr-namespace:Saaft.Desktop.Workspaces"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=Workspaces:ModelBase}"
         Title="{Binding Title.Value}">
 
+    <Window.CommandBindings>
+        <CommandBinding
+            Command="{x:Static Workspaces:Commands.Prompt}"
+            Executed="OnPromptExecuted"
+            CanExecute="OnPromptCanExecute"/>
+    </Window.CommandBindings>
+    
     <b:Interaction.Behaviors>
         <Behaviors:CloseWindowBehavior/>
     </b:Interaction.Behaviors>

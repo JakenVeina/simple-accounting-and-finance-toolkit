@@ -8,5 +8,10 @@ namespace Saaft.Desktop.Workspaces
             = new(
                 name:       nameof(Launch),
                 ownerType:  typeof(Commands));
+
+        public static RoutedCommand Prompt { get; }
+            = new(
+                name:       nameof(Prompt),
+                ownerType:  typeof(Commands));
     }
 }

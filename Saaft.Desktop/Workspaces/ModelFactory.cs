@@ -12,7 +12,7 @@ namespace Saaft.Desktop.Workspaces
             _modelFactory   = modelFactory;
         }
 
-        public MainModel CreateMain()
+        public MainWorkspaceModel CreateMain()
             => new(
                 dataStore:      _dataStore,
                 modelFactory:   _modelFactory);

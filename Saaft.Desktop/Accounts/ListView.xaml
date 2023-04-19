@@ -6,7 +6,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:Accounts="clr-namespace:Saaft.Desktop.Accounts"
-        xmlns:Behaviors="clr-namespace:Saaft.Desktop.Behaviors"
+        xmlns:Behaviors="clr-namespace:Saaft.Desktop.Interactions"
         xmlns:Workspaces="clr-namespace:Saaft.Desktop.Workspaces"
         mc:Ignorable="d" 
         d:DataContext="{d:DesignInstance Type=Accounts:ListViewModel}">
