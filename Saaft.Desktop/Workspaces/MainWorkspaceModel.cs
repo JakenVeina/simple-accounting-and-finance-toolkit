@@ -23,11 +23,24 @@ namespace Saaft.Desktop.Workspaces
             DataStore               dataStore,
             Database.ModelFactory   modelFactory)
         {
+            _closeFileCommandExecuted   = new();
             _newFileCommandExecuted     = new();
             _openFileCommandExecuted    = new();
             _promptRequested            = new();
             _saveFileCommandExecuted    = new();
             _subscriptions              = new();
+
+            _closeFileCommandExecuted
+                .WithLatestFrom(dataStore, (_, file) => file)
+                .ApplyOperation(TrySaveIfNeeded)
+                .Subscribe(_ => dataStore.Value = null)
+                .DisposeWith(_subscriptions);
+
+            _closeFileCommand = ReactiveCommand.Create(
+                onExecuted: _closeFileCommandExecuted,
+                canExecute: dataStore
+                    .Select(file => file is not null)
+                    .DistinctUntilChanged());
 
             _file = dataStore
                 .Select(file => file is not null)
@@ -97,6 +110,9 @@ namespace Saaft.Desktop.Workspaces
             _title = ReactiveProperty.Create("Simple Accounting and Finance Toolkit");
         }
 
+        public ReactiveCommand<Unit> CloseFileCommand
+            => _closeFileCommand;
+
         public ReactiveProperty<FileViewModel?> File
             => _file;
 
@@ -117,6 +133,8 @@ namespace Saaft.Desktop.Workspaces
 
         public void Dispose()
         {
+            _closeFileCommandExecuted.OnCompleted();
+            _newFileCommandExecuted.OnCompleted();
             _openFileCommandExecuted.OnCompleted();
             _promptRequested.OnCompleted();
             _saveFileCommandExecuted.OnCompleted();
@@ -177,6 +195,8 @@ namespace Saaft.Desktop.Workspaces
                 .Switch()
                 .ObserveOn(DispatcherScheduler.Current);
 
+        private readonly ReactiveCommand<Unit>              _closeFileCommand;
+        private readonly Subject<Unit>                      _closeFileCommandExecuted;
         private readonly ReactiveProperty<FileViewModel?>   _file;
         private readonly ReactiveCommand<Unit>              _newFileCommand;
         private readonly Subject<Unit>                      _newFileCommandExecuted;
