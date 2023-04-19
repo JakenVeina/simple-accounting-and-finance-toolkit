@@ -10,12 +10,8 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=Workspaces:MainWorkspaceModel}">
     
-    <b:Interaction.Behaviors>
-        <Interactions:LaunchWorkspaceBehavior/>
-    </b:Interaction.Behaviors>
-    
     <b:Interaction.Triggers>
-        <Interactions:ReactiveTrigger Source="{Binding PromptRequested}">
+        <Interactions:ReactiveTrigger Source="{Binding PromptRequested, Mode=OneTime}">
             <b:InvokeCommandAction
                 Command="{x:Static Workspaces:Commands.Prompt}"
                 PassEventArgsToCommand="True"/>
@@ -25,9 +21,9 @@
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_New" Command="{Binding NewFileCommand}"/>
-                <MenuItem Header="_Open" Command="{Binding OpenFileCommand}"/>
-                <MenuItem Header="_Save" Command="{Binding SaveFileCommand}"/>
+                <MenuItem Header="_New" Command="{Binding NewFileCommand, Mode=OneTime}"/>
+                <MenuItem Header="_Open" Command="{Binding OpenFileCommand, Mode=OneTime}"/>
+                <MenuItem Header="_Save" Command="{Binding SaveFileCommand, Mode=OneTime}"/>
             </MenuItem>
         </Menu>
         

@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Input;
 
 using Microsoft.Win32;
@@ -9,6 +10,40 @@ namespace Saaft.Desktop.Workspaces
     {
         public Window()
             => InitializeComponent();
+
+        private void OnCloseCanExecute(object sender, CanExecuteRoutedEventArgs e)
+            => e.CanExecute = true;
+
+        private void OnCloseExecuted(object sender, ExecutedRoutedEventArgs e)
+            => Close();
+
+        private void OnLaunchCanExecute(object sender, CanExecuteRoutedEventArgs e)
+            => e.CanExecute = true;
+
+        private void OnLaunchExecuted(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (e.Parameter is not Func<ModelBase> workspaceFactory)
+                return;
+
+            var workspace = workspaceFactory.Invoke();
+            try
+            {
+                new Window()
+                    {
+                        DataContext     = workspace,
+                        SizeToContent   = SizeToContent.WidthAndHeight
+                    }
+                    .ShowDialog();
+            }
+            finally
+            {
+                if (workspace is IDisposable disposable)
+                    disposable.Dispose();
+            }
+        }
+
+        private void OnPromptCanExecute(object sender, CanExecuteRoutedEventArgs e)
+            => e.CanExecute = true;
 
         private void OnPromptExecuted(object sender, ExecutedRoutedEventArgs e)
         {
@@ -66,8 +101,5 @@ namespace Saaft.Desktop.Workspaces
                 saveFilePrompt.SetResult(dialog.FileName!);
             }
         }
-
-        private void OnPromptCanExecute(object sender, CanExecuteRoutedEventArgs e)
-            => e.CanExecute = true;
     }
 }
