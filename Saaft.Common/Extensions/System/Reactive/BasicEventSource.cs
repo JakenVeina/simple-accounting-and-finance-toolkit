@@ -2,25 +2,25 @@
 
 namespace System.Reactive
 {
-    public interface IEventPatternSource
+    public interface IBasicEventSource
     {
         event EventHandler? OnNext;
     }
 
-    public class EventPatternSource
+    public class BasicEventSource
         : EventPatternSourceBase<object?, EventArgs>,
-            IEventPatternSource
+            IBasicEventSource
     {
-        public static EventPatternSource Create(
+        public static BasicEventSource Create(
             object?             sender,
             IObservable<Unit>   source)
         {
             var pattern = new EventPattern<object?, EventArgs>(sender, EventArgs.Empty);
 
-            return new EventPatternSource(source.Select(_ => pattern));
+            return new BasicEventSource(source.Select(_ => pattern));
         }
 
-        private EventPatternSource(IObservable<EventPattern<object?, EventArgs>> source)
+        private BasicEventSource(IObservable<EventPattern<object?, EventArgs>> source)
             : base(
                 source:         source,
                 invokeHandler:  static (onExecuted, pattern) => onExecuted.Invoke(pattern.Sender, pattern.EventArgs))

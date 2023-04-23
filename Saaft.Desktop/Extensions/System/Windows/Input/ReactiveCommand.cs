@@ -99,7 +99,7 @@ namespace System.Windows.Input
         void ICommand.Execute(object? parameter)
             => _onExecuted.OnNext(parameter);
 
-        private readonly IEventPatternSource    _canExecuteChanged;
+        private readonly IBasicEventSource    _canExecuteChanged;
         private readonly IObserver<object?>     _onExecuted;
 
         private Predicate<object?> _canExecute;

@@ -1,11 +1,21 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace System.ComponentModel
 {
-    public sealed class ObservableProperty<T>
+    internal static class ObservableProperty
+    {
+        internal static readonly DataErrorsChangedEventArgs ErrorsChangedEventArgs
+            = new(nameof(ObservableProperty<object>.Value));
+
+        internal static readonly PropertyChangedEventArgs ValueChangedEventArgs
+            = new(nameof(ObservableProperty<object>.Value));
+    }
+
+    public class ObservableProperty<T>
         : IObservable<T>,
             INotifyPropertyChanged,
             INotifyDataErrorInfo,
@@ -13,25 +23,38 @@ namespace System.ComponentModel
     {
         public ObservableProperty(T initialValue)
             : this(
-                  initialValue:     initialValue,
-                  errorsFactory:    value => value.Select(_ => Array.Empty<object?>()))
+                  initialValue: initialValue,
+                  validator:    value => value.Select(_ => Array.Empty<object?>()))
         { }
 
         public ObservableProperty(
             T                                                           initialValue,
-            Func<IObservable<T>, IObservable<IReadOnlyList<object?>>>   errorsFactory)
+            Func<IObservable<T>, IObservable<IReadOnlyList<object?>>>   validator)
         {
-            _errors                                 = Array.Empty<object?>();
-            _errorsChangedSubscriptionsByHandler    = new();
-            _propertyChangedSubscriptionsByHandler  = new();
-            _valueSource                            = new(initialValue);
+            _errors = Array.Empty<object?>();
+            _value  = new(initialValue);
 
-            _errorsSource = errorsFactory.Invoke(_valueSource)
+            var value = _value
+                .DistinctUntilChanged()
+                .ShareReplay(1);
+
+            _errorsSource = validator.Invoke(value)
                 .Do(errors => _errors = errors)
                 .ShareReplay(1);
 
+            var errorsChangedEventPattern = new EventPattern<DataErrorsChangedEventArgs>(this, ObservableProperty.ErrorsChangedEventArgs);
+            _errorsChanged = _errorsSource
+                .Select(_ => errorsChangedEventPattern)
+                .ToEventPattern();
+
             _hasErrors = _errorsSource
-                .Select(errors => errors.Count is not 0);
+                .Select(errors => errors.Count is not 0)
+                .DistinctUntilChanged();
+
+            var propertyChangedEventPattern = new EventPattern<object?, PropertyChangedEventArgs>(this, ObservableProperty.ValueChangedEventArgs);
+            _propertyChanged = value
+                .Select(_ => propertyChangedEventPattern)
+                .ToEventPattern();
         }
 
         public IObservable<bool> HasErrors
@@ -39,68 +62,40 @@ namespace System.ComponentModel
 
         public T Value
         {
-            get => _valueSource.Value;
-            set => _valueSource.OnNext(value);
+            get => _value.Value;
+            set => _value.OnNext(value);
         }
 
         public void Dispose()
-            => _valueSource.OnCompleted();
+            => _value.OnCompleted();
 
         public IDisposable Subscribe(IObserver<T> observer)
-            => _valueSource.Subscribe(observer);
+            => _value.Subscribe(observer);
 
         bool INotifyDataErrorInfo.HasErrors
             => _errors.Count is not 0;
 
         event EventHandler<DataErrorsChangedEventArgs>? INotifyDataErrorInfo.ErrorsChanged
         {
-            add
-            {
-                if ((value is not null) && !_errorsChangedSubscriptionsByHandler.ContainsKey(value))
-                    _errorsChangedSubscriptionsByHandler.Add(value, _errorsSource.Subscribe(_ => value.Invoke(this, ErrorsChangedEventArgs)));
-            }
-            remove
-            {
-                if ((value is not null) && _errorsChangedSubscriptionsByHandler.TryGetValue(value, out var subscription))
-                {
-                    _errorsChangedSubscriptionsByHandler.Remove(value);
-                    subscription.Dispose();
-                }
-            }
+            add     => _errorsChanged.OnNext += value;
+            remove  => _errorsChanged.OnNext -= value;
         }
 
         event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
         {
-            add
-            {
-                if ((value is not null) && !_propertyChangedSubscriptionsByHandler.ContainsKey(value))
-                    _propertyChangedSubscriptionsByHandler.Add(value, _valueSource.Subscribe(_ => value.Invoke(this, ValueChangedEventArgs)));
-            }
-            remove
-            {
-                if ((value is not null) && _propertyChangedSubscriptionsByHandler.TryGetValue(value, out var subscription))
-                {
-                    _propertyChangedSubscriptionsByHandler.Remove(value);
-                    subscription.Dispose();
-                }
-            }
+            add     => _propertyChanged.OnNext += value;
+            remove  => _propertyChanged.OnNext -= value;
         }
 
         IEnumerable INotifyDataErrorInfo.GetErrors(string? propertyName)
             => _errors;
 
-        private readonly Dictionary<EventHandler<DataErrorsChangedEventArgs>, IDisposable>  _errorsChangedSubscriptionsByHandler;
-        private readonly IObservable<IReadOnlyList<object?>>                                _errorsSource;
-        private readonly IObservable<bool>                                                  _hasErrors;
-        private readonly Dictionary<PropertyChangedEventHandler, IDisposable>               _propertyChangedSubscriptionsByHandler;
-        private readonly BehaviorSubject<T>                                                 _valueSource;
+        private readonly IEventPatternSource<DataErrorsChangedEventArgs>    _errorsChanged;
+        private readonly IObservable<IReadOnlyList<object?>>                _errorsSource;
+        private readonly IObservable<bool>                                  _hasErrors;
+        private readonly IPropertyChangedEventSource                        _propertyChanged;
+        private readonly BehaviorSubject<T>                                 _value;
 
         private IReadOnlyList<object?> _errors;
-
-        private static readonly DataErrorsChangedEventArgs ErrorsChangedEventArgs
-            = new(nameof(Value));
-
-        private static readonly PropertyChangedEventArgs ValueChangedEventArgs
-            = new(nameof(Value));
     }
 }

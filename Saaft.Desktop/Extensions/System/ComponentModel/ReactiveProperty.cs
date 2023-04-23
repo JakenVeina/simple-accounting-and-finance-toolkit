@@ -1,10 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System.Reactive;
 using System.Reactive.Linq;
 
 namespace System.ComponentModel
 {
-    public abstract class ReactiveProperty
-        : INotifyPropertyChanged
+    public static class ReactiveProperty
     {
         public static ReactiveProperty<T> Create<T>(T value)
             => new(
@@ -23,60 +22,41 @@ namespace System.ComponentModel
                 initialValue:   initialValue,
                 source:         source);
 
-        public ReactiveProperty()
-            => _subscriptionsByHandler = new();
-
-        protected abstract IDisposable OnSubscribing(PropertyChangedEventHandler handler);
-
-        event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
-        {
-            add
-            {
-                if ((value is not null) && !_subscriptionsByHandler.ContainsKey(value))
-                    _subscriptionsByHandler.Add(value, OnSubscribing(value));
-            }
-            remove
-            {
-                if ((value is not null) && _subscriptionsByHandler.TryGetValue(value, out var subscription))
-                {
-                    _subscriptionsByHandler.Remove(value);
-                    subscription.Dispose();
-                }
-            }
-        }
-
-        private readonly Dictionary<PropertyChangedEventHandler, IDisposable> _subscriptionsByHandler;
-
-        protected static readonly PropertyChangedEventArgs ValueChangedEventArgs
+        internal static readonly PropertyChangedEventArgs ValueChangedEventArgs
             = new(nameof(ReactiveProperty<object>.Value));
     }
 
-    public sealed class ReactiveProperty<T>
-        : ReactiveProperty,
-            IObservable<T>
+    public class ReactiveProperty<T>
+        : INotifyPropertyChanged
     {
         internal ReactiveProperty(
             T               initialValue,
             IObservable<T>  source)
         {
-            _value = initialValue;
+            var pattern = new EventPattern<object?, PropertyChangedEventArgs>(
+                sender: this,
+                e:      ReactiveProperty.ValueChangedEventArgs);
 
-            _source = source
+            _propertyChanged = source
                 .Do(value => _value = value)
                 .Finally(() => _value = initialValue)
-                .ShareReplay(1);
+                .Select(_ => pattern)
+                .ShareReplay(1)
+                .ToEventPattern();
+
+            _value = initialValue;
         }
 
         public T Value
             => _value;
 
-        public IDisposable Subscribe(IObserver<T> observer)
-            => _source.Subscribe(observer);
+        event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
+        {
+            add     => _propertyChanged.OnNext += value;
+            remove  => _propertyChanged.OnNext -= value;
+        }
 
-        protected override IDisposable OnSubscribing(PropertyChangedEventHandler handler)
-            => _source.Subscribe(_ => handler.Invoke(this, ValueChangedEventArgs));
-
-        private readonly IObservable<T> _source;
+        private readonly IPropertyChangedEventSource _propertyChanged;
 
         private T _value;
     }

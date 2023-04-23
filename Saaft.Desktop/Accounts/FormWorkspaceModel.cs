@@ -27,7 +27,7 @@ namespace Saaft.Desktop.Accounts
 
             _name = new(
                 initialValue:   model.Name,
-                errorsFactory:  name => Observable.CombineLatest(
+                validator:      name => Observable.CombineLatest(
                     name,
                     repository.CurrentVersions,
                     (name, versions) => name switch
@@ -81,7 +81,7 @@ namespace Saaft.Desktop.Accounts
 
             _name = new(
                 initialValue:   model.Name,
-                errorsFactory:  name => Observable.CombineLatest(
+                validator:      name => Observable.CombineLatest(
                     name,
                     repository.CurrentVersions,
                     (name, versions) => name switch
