@@ -134,10 +134,15 @@ namespace Saaft.Desktop.Workspaces
         public void Dispose()
         {
             _closeFileCommandExecuted.OnCompleted();
+            _closeFileCommandExecuted.Dispose();
             _newFileCommandExecuted.OnCompleted();
+            _newFileCommandExecuted.Dispose();
             _openFileCommandExecuted.OnCompleted();
+            _openFileCommandExecuted.Dispose();
             _promptRequested.OnCompleted();
+            _promptRequested.Dispose();
             _saveFileCommandExecuted.OnCompleted();
+            _saveFileCommandExecuted.Dispose();
             _subscriptions.Dispose();
         }
 

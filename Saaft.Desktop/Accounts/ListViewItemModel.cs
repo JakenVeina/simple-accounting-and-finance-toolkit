@@ -98,8 +98,8 @@ namespace Saaft.Desktop.Accounts
 
             _createChildCommand = ReactiveCommand.Create(_createChildCommandExecuted);
 
-            _editRequested = new();
-            _editRequested 
+            _editCommandExecuted = new();
+            _editCommandExecuted 
                 .WithLatestFrom(currentVersion, (_, currentVersion) => currentVersion)
                 .Subscribe(currentVersion => _workspaceLaunchRequested.OnNext(() => modelFactory
                     .CreateFormWorkspace(new MutationModel()
@@ -112,7 +112,7 @@ namespace Saaft.Desktop.Accounts
                     })))
                 .DisposeWith(_subscriptions);
 
-            _editCommand = ReactiveCommand.Create(_editRequested);
+            _editCommand = ReactiveCommand.Create(_editCommandExecuted);
 
             _name = currentVersion
                 .Select(version => version.Name)
@@ -197,10 +197,20 @@ namespace Saaft.Desktop.Accounts
         public void Dispose()
         {
             _adoptAccountIdCommandExecuted.OnCompleted();
-            _createChildCommandExecuted?.OnCompleted();
-            _editRequested?.OnCompleted();
+            _adoptAccountIdCommandExecuted.Dispose();
+            if (_createChildCommandExecuted is not null)
+            {
+                _createChildCommandExecuted.OnCompleted();
+                _createChildCommandExecuted.Dispose();
+            }
+            if (_editCommandExecuted is not null)
+            {
+                _editCommandExecuted.OnCompleted();
+                _editCommandExecuted.Dispose();
+            }
             _subscriptions.Dispose();
             _workspaceLaunchRequested.OnCompleted();
+            _workspaceLaunchRequested.Dispose();
         }
 
         private static IObservable<IReadOnlyList<ListViewItemModel>> ViewAccountIds(
@@ -222,7 +232,7 @@ namespace Saaft.Desktop.Accounts
         private readonly ReactiveCommand                                    _createChildCommand;
         private readonly Subject<Unit>?                                     _createChildCommandExecuted;
         private readonly ReactiveCommand                                    _editCommand;
-        private readonly Subject<Unit>?                                     _editRequested;
+        private readonly Subject<Unit>?                                     _editCommandExecuted;
         private readonly bool                                               _isAccount;
         private readonly ReactiveProperty<string>                           _name;
         private readonly CompositeDisposable                                _subscriptions;

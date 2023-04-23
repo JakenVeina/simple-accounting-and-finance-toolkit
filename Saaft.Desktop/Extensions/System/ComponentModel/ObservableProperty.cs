@@ -67,7 +67,10 @@ namespace System.ComponentModel
         }
 
         public void Dispose()
-            => _value.OnCompleted();
+        {
+            _value.OnCompleted();
+            _value.Dispose();
+        }
 
         public IDisposable Subscribe(IObserver<T> observer)
             => _value.Subscribe(observer);

@@ -20,10 +20,10 @@ namespace Saaft.Desktop.Accounts
             Repository      repository,
             CreationModel   model)
         {
-            _description    = new(model.Description);
-            _saveRequested  = new();
-            _subscriptions  = new();
-            _type           = model.Type;
+            _description            = new(model.Description);
+            _saveCommandExecuted    = new();
+            _subscriptions          = new();
+            _type                   = model.Type;
 
             _name = new(
                 initialValue:   model.Name,
@@ -51,13 +51,13 @@ namespace Saaft.Desktop.Accounts
                 .ToReactiveProperty();
 
             _saveCommand = ReactiveCommand.Create(
-                onExecuted: _saveRequested,
+                onExecuted: _saveCommandExecuted,
                 canExecute: _name.HasErrors
                     .Select(hasErrors => !hasErrors));
 
             _title = ReactiveProperty.Create("Create New Account");
 
-            _saveRequested
+            _saveCommandExecuted
                 .WithLatestFrom(_description,           (_, description) => description)
                 .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
                 .Select(@params => model with
@@ -74,10 +74,10 @@ namespace Saaft.Desktop.Accounts
             Repository      repository,
             MutationModel   model)
         {
-            _description    = new(model.Description);
-            _saveRequested  = new();
-            _subscriptions  = new();
-            _type           = model.Type;
+            _description            = new(model.Description);
+            _saveCommandExecuted    = new();
+            _subscriptions          = new();
+            _type                   = model.Type;
 
             _name = new(
                 initialValue:   model.Name,
@@ -106,7 +106,7 @@ namespace Saaft.Desktop.Accounts
                 .ToReactiveProperty();
 
             _saveCommand = ReactiveCommand.Create(
-                onExecuted: _saveRequested,
+                onExecuted: _saveCommandExecuted,
                 canExecute: Observable.CombineLatest(
                     _description.Select(description => description != model.Description),
                     _name.Select(name => name != model.Name),
@@ -115,7 +115,7 @@ namespace Saaft.Desktop.Accounts
 
             _title = ReactiveProperty.Create("Edit Account");
 
-            _saveRequested
+            _saveCommandExecuted
                 .WithLatestFrom(_description,           (_, description) => description)
                 .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
                 .Select(@params => model with
@@ -150,7 +150,8 @@ namespace Saaft.Desktop.Accounts
         {
             _description.Dispose();
             _name.Dispose();
-            _saveRequested.OnCompleted();
+            _saveCommandExecuted.OnCompleted();
+            _saveCommandExecuted.Dispose();
             _subscriptions.Dispose();
         }
 
@@ -158,7 +159,7 @@ namespace Saaft.Desktop.Accounts
         private readonly ObservableProperty<string?>    _name;
         private readonly ReactiveProperty<string?>      _parentName;
         private readonly ReactiveCommand                _saveCommand;
-        private readonly Subject<Unit>                  _saveRequested;
+        private readonly Subject<Unit>                  _saveCommandExecuted;
         private readonly CompositeDisposable            _subscriptions;
         private readonly ReactiveProperty<string>       _title;
         private readonly Data.Accounts.Type             _type;
