@@ -107,7 +107,7 @@ namespace Saaft.Desktop.Accounts
                         AccountId       = currentVersion.AccountId,
                         Description     = currentVersion.Description,
                         Name            = currentVersion.Name,
-                        ParentAccountId = currentVersion.AccountId,
+                        ParentAccountId = currentVersion.ParentAccountId,
                         Type            = currentVersion.Type
                     })))
                 .DisposeWith(_subscriptions);
