@@ -137,7 +137,7 @@ namespace Saaft.Desktop.Accounts
         public ReactiveProperty<string?> ParentName
             => _parentName;
 
-        public ReactiveCommand<Unit> SaveCommand
+        public ReactiveCommand SaveCommand
             => _saveCommand;
 
         public override ReactiveProperty<string> Title
@@ -157,7 +157,7 @@ namespace Saaft.Desktop.Accounts
         private readonly ObservableProperty<string?>    _description;
         private readonly ObservableProperty<string?>    _name;
         private readonly ReactiveProperty<string?>      _parentName;
-        private readonly ReactiveCommand<Unit>          _saveCommand;
+        private readonly ReactiveCommand                _saveCommand;
         private readonly Subject<Unit>                  _saveRequested;
         private readonly CompositeDisposable            _subscriptions;
         private readonly ReactiveProperty<string>       _title;

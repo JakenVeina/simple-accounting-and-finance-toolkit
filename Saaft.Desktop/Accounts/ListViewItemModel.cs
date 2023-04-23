@@ -20,13 +20,61 @@ namespace Saaft.Desktop.Accounts
             Repository      repository,
             ulong           accountId)
         {
-            _subscriptions              = new();
-            _workspaceLaunchRequested   = new();
+            _accountId                      = accountId;
+            _adoptAccountIdCommandExecuted  = new();
+            _createChildCommandExecuted     = new();
+            _isAccount                      = true;
+            _subscriptions                  = new();
+            _workspaceLaunchRequested       = new();
 
             var currentVersion = repository.CurrentVersions
                 .Select(versions => versions.Single(version => version.AccountId == accountId))
                 .DistinctUntilChanged()
                 .ShareReplay(1);
+
+            _adoptAccountIdCommand = ReactiveCommand.Create(
+                onExecuted: _adoptAccountIdCommandExecuted,
+                canExecute: Observable.CombineLatest(currentVersion, repository.CurrentVersions, (currentVersion, currentVersions) => (currentVersion, currentVersions))
+                    .Select(@params =>
+                    {
+                        var invalidNewChildAccountIds = new HashSet<ulong>(@params.currentVersions.Count)
+                        {
+                            // Account cannot be its own child
+                            @params.currentVersion.AccountId
+                        };
+
+                        // Ignore existing children, to avoid redundant updates
+                        foreach(var version in @params.currentVersions.Where(version => version.ParentAccountId == @params.currentVersion.AccountId))
+                            invalidNewChildAccountIds.Add(version.AccountId);
+
+                        // Account cannot adopt an ancestor, that would cause a loop.
+                        var ancestorAccountId = @params.currentVersion.ParentAccountId;
+                        while(ancestorAccountId is not null)
+                        {
+                            invalidNewChildAccountIds.Add(ancestorAccountId.Value);
+                            ancestorAccountId = @params.currentVersions
+                                .First(version => version.AccountId == ancestorAccountId.Value)
+                                .ParentAccountId;
+                        }
+
+                        return new Predicate<ulong?>(newChildAccountId => (newChildAccountId is null)
+                            || !invalidNewChildAccountIds.Contains(newChildAccountId.Value));
+                    }));
+
+            _adoptAccountIdCommandExecuted
+                .WithLatestFrom(repository.CurrentVersions, (targetAccountId, currentVersions) => currentVersions
+                    .First(version => version.AccountId == targetAccountId))
+                .WithLatestFrom(currentVersion, (targetVersion, currentVersion) => new MutationModel()
+                {
+                    AccountId       = targetVersion.AccountId,
+                    Description     = targetVersion.Description,
+                    Name            = targetVersion.Name,
+                    ParentAccountId = currentVersion.AccountId,
+                    Type            = currentVersion.Type
+                })
+                .ApplyOperation(repository.Mutate)
+                .Subscribe()
+                .DisposeWith(_subscriptions);
 
             _children = repository.CurrentVersions
                 .Select(versions => versions
@@ -37,8 +85,7 @@ namespace Saaft.Desktop.Accounts
                 .ApplyOperation(accountIds => ViewAccountIds(accountIds, modelFactory))
                 .ToReactiveProperty(Array.Empty<ListViewItemModel>());
 
-            _createChildRequested = new();
-            _createChildRequested
+            _createChildCommandExecuted
                 .WithLatestFrom(currentVersion, (_, currentVersion) => currentVersion)
                 .Subscribe(currentVersion => _workspaceLaunchRequested.OnNext(() => modelFactory
                     .CreateFormWorkspace(new CreationModel()
@@ -49,7 +96,7 @@ namespace Saaft.Desktop.Accounts
                     })))
                 .DisposeWith(_subscriptions);
 
-            _createChildCommand = ReactiveCommand.Create(_createChildRequested);
+            _createChildCommand = ReactiveCommand.Create(_createChildCommandExecuted);
 
             _editRequested = new();
             _editRequested 
@@ -78,7 +125,28 @@ namespace Saaft.Desktop.Accounts
             Repository          repository,
             Data.Accounts.Type  type)
         {
-            _workspaceLaunchRequested = new();
+            _adoptAccountIdCommandExecuted  = new();
+            _isAccount                      = false;
+            _subscriptions                  = new();
+            _workspaceLaunchRequested       = new();
+
+            _adoptAccountIdCommand = ReactiveCommand.Create(
+                onExecuted: _adoptAccountIdCommandExecuted);
+
+            _adoptAccountIdCommandExecuted
+                .WithLatestFrom(repository.CurrentVersions, (targetAccountId, currentVersions) => currentVersions
+                    .First(version => version.AccountId == targetAccountId))
+                .Select(targetVersion => new MutationModel()
+                {
+                    AccountId       = targetVersion.AccountId,
+                    Description     = targetVersion.Description,
+                    Name            = targetVersion.Name,
+                    ParentAccountId = null,
+                    Type            = type
+                })
+                .ApplyOperation(repository.Mutate)
+                .Subscribe()
+                .DisposeWith(_subscriptions);
 
             _children = repository.CurrentVersions
                 .Select(versions => versions
@@ -102,14 +170,23 @@ namespace Saaft.Desktop.Accounts
             _name = ReactiveProperty.Create(type.ToString());
         }
 
-        public ReactiveCommand<Unit> CreateChildCommand
-            => _createChildCommand;
+        public ulong? AccountId
+            => _accountId;
+
+        public ReactiveCommand AdoptAccountIdCommand
+            => _adoptAccountIdCommand;
 
         public ReactiveProperty<IReadOnlyList<ListViewItemModel>> Children
             => _children;
 
-        public ReactiveCommand<Unit> EditCommand
+        public ReactiveCommand CreateChildCommand
+            => _createChildCommand;
+
+        public ReactiveCommand EditCommand
             => _editCommand;
+
+        public bool IsAccount
+            => _isAccount;
 
         public ReactiveProperty<string> Name
             => _name;
@@ -119,9 +196,10 @@ namespace Saaft.Desktop.Accounts
 
         public void Dispose()
         {
-            _createChildRequested?.OnCompleted();
+            _adoptAccountIdCommandExecuted.OnCompleted();
+            _createChildCommandExecuted?.OnCompleted();
             _editRequested?.OnCompleted();
-            _subscriptions?.Dispose();
+            _subscriptions.Dispose();
             _workspaceLaunchRequested.OnCompleted();
         }
 
@@ -137,13 +215,17 @@ namespace Saaft.Desktop.Accounts
                         .CombineLatest(children => children.ToArray()))
                 .Switch();
 
+        private readonly ulong?                                             _accountId;
+        private readonly ReactiveCommand                                    _adoptAccountIdCommand;
+        private readonly Subject<ulong>                                     _adoptAccountIdCommandExecuted;
         private readonly ReactiveProperty<IReadOnlyList<ListViewItemModel>> _children;
-        private readonly ReactiveCommand<Unit>                              _createChildCommand;
-        private readonly Subject<Unit>?                                     _createChildRequested;
-        private readonly ReactiveCommand<Unit>                              _editCommand;
+        private readonly ReactiveCommand                                    _createChildCommand;
+        private readonly Subject<Unit>?                                     _createChildCommandExecuted;
+        private readonly ReactiveCommand                                    _editCommand;
         private readonly Subject<Unit>?                                     _editRequested;
+        private readonly bool                                               _isAccount;
         private readonly ReactiveProperty<string>                           _name;
-        private readonly CompositeDisposable?                               _subscriptions;
+        private readonly CompositeDisposable                                _subscriptions;
         private readonly Subject<Func<Workspaces.ModelBase>>                _workspaceLaunchRequested;
     }
 }

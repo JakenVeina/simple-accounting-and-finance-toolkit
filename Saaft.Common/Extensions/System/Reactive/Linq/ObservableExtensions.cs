@@ -19,6 +19,13 @@ namespace System.Reactive.Linq
                 .Multicast(new ResettingReplaySubject<T>(bufferSize))
                 .RefCount();
 
+        public static IEventPatternSource ToEventPattern(
+                this    IObservable<Unit>   source,
+                        object?             sender)
+            => EventPatternSource.Create(
+                sender: sender,
+                source: source);
+
         public static IObservable<T> WhereNotNull<T>(this IObservable<T?> source)
                 where T : class
             => source.Where(value => value is not null)!;

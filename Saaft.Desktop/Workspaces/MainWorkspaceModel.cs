@@ -110,22 +110,22 @@ namespace Saaft.Desktop.Workspaces
             _title = ReactiveProperty.Create("Simple Accounting and Finance Toolkit");
         }
 
-        public ReactiveCommand<Unit> CloseFileCommand
+        public ReactiveCommand CloseFileCommand
             => _closeFileCommand;
 
         public ReactiveProperty<FileViewModel?> File
             => _file;
 
-        public ReactiveCommand<Unit> NewFileCommand
+        public ReactiveCommand NewFileCommand
             => _newFileCommand;
 
-        public ReactiveCommand<Unit> OpenFileCommand
+        public ReactiveCommand OpenFileCommand
             => _openFileCommand;
 
         public IObservable<object> PromptRequested
             => _promptRequested;
 
-        public ReactiveCommand<Unit> SaveFileCommand
+        public ReactiveCommand SaveFileCommand
             => _saveFileCommand;
 
         public override ReactiveProperty<string> Title
@@ -195,15 +195,15 @@ namespace Saaft.Desktop.Workspaces
                 .Switch()
                 .ObserveOn(DispatcherScheduler.Current);
 
-        private readonly ReactiveCommand<Unit>              _closeFileCommand;
+        private readonly ReactiveCommand                    _closeFileCommand;
         private readonly Subject<Unit>                      _closeFileCommandExecuted;
         private readonly ReactiveProperty<FileViewModel?>   _file;
-        private readonly ReactiveCommand<Unit>              _newFileCommand;
+        private readonly ReactiveCommand                    _newFileCommand;
         private readonly Subject<Unit>                      _newFileCommandExecuted;
-        private readonly ReactiveCommand<Unit>              _openFileCommand;
+        private readonly ReactiveCommand                    _openFileCommand;
         private readonly Subject<Unit>                      _openFileCommandExecuted;
         private readonly Subject<object>                    _promptRequested;
-        private readonly ReactiveCommand<Unit>              _saveFileCommand;
+        private readonly ReactiveCommand                    _saveFileCommand;
         private readonly Subject<Unit>                      _saveFileCommandExecuted;
         private readonly CompositeDisposable                _subscriptions;
         private readonly ReactiveProperty<string>           _title;

@@ -8,15 +8,29 @@
         xmlns:Accounts="clr-namespace:Saaft.Desktop.Accounts"
         xmlns:Interactions="clr-namespace:Saaft.Desktop.Interactions"
         xmlns:Workspaces="clr-namespace:Saaft.Desktop.Workspaces"
-        mc:Ignorable="d" 
+        mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=Accounts:ListViewModel}">
 
     <TreeView ItemsSource="{Binding RootItems.Value}">
+        <TreeView.ItemContainerStyle>
+            <Style TargetType="TreeViewItem">
+                <Setter Property="IsExpanded" Value="True"/>
+            </Style>
+        </TreeView.ItemContainerStyle>
         <TreeView.ItemTemplate>
             <HierarchicalDataTemplate
                     DataType="{x:Type Accounts:ListViewItemModel}"
                     ItemsSource="{Binding Children.Value}">
                 <TextBlock Text="{Binding Name.Value}">
+                    <b:Interaction.Behaviors>
+                        <Interactions:ClickAndDragBehavior
+                            DataFormat="Saaft.Desktop.Accounts.AccountId"
+                            DataValue="{Binding AccountId, Mode=OneTime}"
+                            Effects="Move"/>
+                        <Interactions:ReceiveDropCommandBehavior
+                            DataFormat="Saaft.Desktop.Accounts.AccountId"
+                            Command="{Binding AdoptAccountIdCommand}"/>
+                    </b:Interaction.Behaviors>
                     <b:Interaction.Triggers>
                         <Interactions:ReactiveTrigger Source="{Binding WorkspaceLaunchRequested, Mode=OneTime}">
                             <b:InvokeCommandAction
