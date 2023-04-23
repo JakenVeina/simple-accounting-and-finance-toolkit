@@ -6,9 +6,16 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:Accounts="clr-namespace:Saaft.Desktop.Accounts"
+        xmlns:Interactions="clr-namespace:Saaft.Desktop.Interactions"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=Accounts:FormWorkspaceModel}">
 
+    <b:Interaction.Triggers>
+        <Interactions:ReactiveTrigger Source="{Binding SaveCompleted, Mode=OneTime}">
+            <b:InvokeCommandAction Command="Close"/>
+        </Interactions:ReactiveTrigger>
+    </b:Interaction.Triggers>
+    
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
@@ -30,20 +37,25 @@
         <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding ParentName.Value, TargetNullValue=&lt;None&gt;}"/>
 
         <TextBlock  Grid.Column="0" Grid.Row="2" HorizontalAlignment="Right">Name:</TextBlock>
-        <TextBox    Grid.Column="1" Grid.Row="2" Text="{Binding Name.Value, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBox    Grid.Column="1" Grid.Row="2" Text="{Binding Name.Value, UpdateSourceTrigger=PropertyChanged}">
+            <b:Interaction.Triggers>
+                <b:KeyTrigger Key="Return" ActiveOnFocus="True">
+                    <b:InvokeCommandAction Command="{Binding SaveCommand, Mode=OneTime}"/>
+                </b:KeyTrigger>
+            </b:Interaction.Triggers>
+        </TextBox>
 
         <TextBlock  Grid.Column="0" Grid.Row="3" HorizontalAlignment="Right">Description:</TextBlock>
-        <TextBox    Grid.Column="1" Grid.Row="3" Text="{Binding Description.Value, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBox    Grid.Column="1" Grid.Row="3" Text="{Binding Description.Value, UpdateSourceTrigger=PropertyChanged}">
+            <b:Interaction.Triggers>
+                <b:KeyTrigger Key="Return" ActiveOnFocus="True">
+                    <b:InvokeCommandAction Command="{Binding SaveCommand, Mode=OneTime}"/>
+                </b:KeyTrigger>
+            </b:Interaction.Triggers>
+        </TextBox>
 
         <StackPanel Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" Orientation="Horizontal">
-            <Button Command="{Binding SaveCommand, Mode=OneTime}">
-                <b:Interaction.Triggers>
-                    <b:EventTrigger EventName="Click">
-                        <b:InvokeCommandAction Command="Close"/>
-                    </b:EventTrigger>
-                </b:Interaction.Triggers>
-                <TextBlock>Save</TextBlock>
-            </Button>
+            <Button Command="{Binding SaveCommand, Mode=OneTime}">Save</Button>
             <Button Command="Close">Cancel</Button>
         </StackPanel>
     </Grid>

@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows.Input;
@@ -22,7 +21,6 @@ namespace Saaft.Desktop.Accounts
         {
             _description            = new(model.Description);
             _saveCommandExecuted    = new();
-            _subscriptions          = new();
             _type                   = model.Type;
 
             _name = new(
@@ -57,7 +55,7 @@ namespace Saaft.Desktop.Accounts
 
             _title = ReactiveProperty.Create("Create New Account");
 
-            _saveCommandExecuted
+            _saveCompleted = _saveCommandExecuted
                 .WithLatestFrom(_description,           (_, description) => description)
                 .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
                 .Select(@params => model with
@@ -66,8 +64,7 @@ namespace Saaft.Desktop.Accounts
                     Name        = @params.name
                 })
                 .ApplyOperation(repository.Create)
-                .Subscribe()
-                .DisposeWith(_subscriptions);
+                .Share();
         }
 
         public FormWorkspaceModel(
@@ -76,7 +73,6 @@ namespace Saaft.Desktop.Accounts
         {
             _description            = new(model.Description);
             _saveCommandExecuted    = new();
-            _subscriptions          = new();
             _type                   = model.Type;
 
             _name = new(
@@ -115,7 +111,7 @@ namespace Saaft.Desktop.Accounts
 
             _title = ReactiveProperty.Create("Edit Account");
 
-            _saveCommandExecuted
+            _saveCompleted = _saveCommandExecuted
                 .WithLatestFrom(_description,           (_, description) => description)
                 .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
                 .Select(@params => model with
@@ -124,8 +120,7 @@ namespace Saaft.Desktop.Accounts
                     Name        = @params.name
                 })
                 .ApplyOperation(repository.Mutate)
-                .Subscribe()
-                .DisposeWith(_subscriptions);
+                .Share();
         }
 
         public ObservableProperty<string?> Description
@@ -140,6 +135,9 @@ namespace Saaft.Desktop.Accounts
         public ReactiveCommand SaveCommand
             => _saveCommand;
 
+        public IObservable<Unit> SaveCompleted
+            => _saveCompleted;
+
         public override ReactiveProperty<string> Title
             => _title;
 
@@ -152,7 +150,6 @@ namespace Saaft.Desktop.Accounts
             _name.Dispose();
             _saveCommandExecuted.OnCompleted();
             _saveCommandExecuted.Dispose();
-            _subscriptions.Dispose();
         }
 
         private readonly ObservableProperty<string?>    _description;
@@ -160,7 +157,7 @@ namespace Saaft.Desktop.Accounts
         private readonly ReactiveProperty<string?>      _parentName;
         private readonly ReactiveCommand                _saveCommand;
         private readonly Subject<Unit>                  _saveCommandExecuted;
-        private readonly CompositeDisposable            _subscriptions;
+        private readonly IObservable<Unit>              _saveCompleted;
         private readonly ReactiveProperty<string>       _title;
         private readonly Data.Accounts.Type             _type;
     }
