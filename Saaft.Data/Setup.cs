@@ -2,6 +2,7 @@
 
 using Saaft.Data.Accounts;
 using Saaft.Data.Auditing;
+using Saaft.Data.Database;
 
 namespace Saaft.Data
 {
@@ -11,6 +12,7 @@ namespace Saaft.Data
             => services
                 .AddAccounts()
                 .AddAuditing()
-                .AddSingleton<DataStore>();
+                .AddDatabase()
+                .AddSingleton<DataStateStore>();
     }
 }

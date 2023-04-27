@@ -12,18 +12,17 @@ namespace Saaft.Desktop.Database
     public class FileViewModel
     {
         public FileViewModel(
-            DataStore               dataStore,
+            DataStateStore          dataState,
             Accounts.ModelFactory   modelFactory)
         {
             _accountsList = modelFactory.CreateListView();
 
-            _name = dataStore
-                .WhereNotNull()
-                .Select(file => string.Concat(
-                    (file.FilePath is null)
+            _name = dataState
+                .Select(dataState => string.Concat(
+                    (dataState.LoadedFile.FilePath is null)
                         ? FileEntity.DefaultFilename
-                        : Path.GetFileName(file.FilePath),
-                    file.HasChanges
+                        : Path.GetFileName(dataState.LoadedFile.FilePath),
+                    dataState.LoadedFile.HasChanges
                         ? "*"
                         : ""))
                 .DistinctUntilChanged()

@@ -6,10 +6,9 @@ namespace Saaft.Data.Auditing
 {
     public class Repository
     {
-        public Repository(DataStore dataStore)
-            => _nextActionId = dataStore
-                .WhereNotNull()
-                .Select(file => file.Database.AuditingActions)
+        public Repository(Database.Repository databaseRepository)
+            => _nextActionId = databaseRepository.LoadedDatabase
+                .Select(database => database.AuditingActions)
                 .DistinctUntilChanged()
                 .Select(actions => actions
                     .Select(action => action.Id)

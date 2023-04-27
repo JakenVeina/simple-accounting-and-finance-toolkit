@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
@@ -28,7 +29,8 @@ namespace Saaft.Desktop.Accounts
             _workspaceLaunchRequested       = new();
 
             var currentVersion = repository.CurrentVersions
-                .Select(versions => versions.Single(version => version.AccountId == accountId))
+                .Select(versions => versions.SingleOrDefault(version => version.AccountId == accountId))
+                .WhereNotNull()
                 .DistinctUntilChanged()
                 .ShareReplay(1);
 
@@ -53,8 +55,8 @@ namespace Saaft.Desktop.Accounts
                         {
                             invalidNewChildAccountIds.Add(ancestorAccountId.Value);
                             ancestorAccountId = @params.currentVersions
-                                .First(version => version.AccountId == ancestorAccountId.Value)
-                                .ParentAccountId;
+                                .FirstOrDefault(version => version.AccountId == ancestorAccountId.Value)
+                                ?.ParentAccountId;
                         }
 
                         return new Predicate<ulong?>(newChildAccountId => (newChildAccountId is null)

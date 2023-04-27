@@ -5,19 +5,23 @@ namespace Saaft.Desktop.Workspaces
     public class ModelFactory
     {
         public ModelFactory(
-            DataStore               dataStore,
-            Database.ModelFactory   modelFactory)
+            Data.Database.Repository    databaseRepository,
+            DataStateStore              dataState,
+            Database.ModelFactory       modelFactory)
         {
-            _dataStore      = dataStore;
-            _modelFactory   = modelFactory;
+            _databaseRepository = databaseRepository;
+            _dataState          = dataState;
+            _modelFactory       = modelFactory;
         }
 
         public MainWorkspaceModel CreateMain()
             => new(
-                dataStore:      _dataStore,
-                modelFactory:   _modelFactory);
+                databaseRepository: _databaseRepository,
+                dataState:          _dataState,
+                modelFactory:       _modelFactory);
 
-        private readonly DataStore              _dataStore;
-        private readonly Database.ModelFactory  _modelFactory;
+        private readonly Data.Database.Repository   _databaseRepository;
+        private readonly DataStateStore             _dataState;
+        private readonly Database.ModelFactory      _modelFactory;
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace System.Reactive.Linq
+﻿using System.Reactive.Linq;
+
+namespace System
 {
     public static class ReactiveDisposable
     {

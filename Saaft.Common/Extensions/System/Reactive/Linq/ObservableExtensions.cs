@@ -20,9 +20,6 @@ namespace System.Reactive.Linq
                 .Multicast(new ResettingReplaySubject<T>(bufferSize))
                 .RefCount();
 
-        public static IPropertyChangedEventSource ToEventPattern(this IObservable<EventPattern<object?, PropertyChangedEventArgs>> source)
-            => new PropertyChangedEventSource(source);
-
         public static IBasicEventSource ToEventPattern(
                 this    IObservable<Unit>   source,
                         object?             sender)

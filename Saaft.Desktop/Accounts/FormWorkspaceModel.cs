@@ -64,6 +64,7 @@ namespace Saaft.Desktop.Accounts
                     Name        = @params.name
                 })
                 .ApplyOperation(repository.Create)
+                .Select(_ => Unit.Default)
                 .Share();
         }
 
@@ -120,6 +121,7 @@ namespace Saaft.Desktop.Accounts
                     Name        = @params.name
                 })
                 .ApplyOperation(repository.Mutate)
+                .Select(_ => Unit.Default)
                 .Share();
         }
 

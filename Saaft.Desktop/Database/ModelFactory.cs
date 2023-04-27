@@ -5,19 +5,19 @@ namespace Saaft.Desktop.Database
     public class ModelFactory
     {
         public ModelFactory(
-            DataStore               dataStore,
+            DataStateStore          dataState,
             Accounts.ModelFactory   modelFactory)
         {
-            _dataStore      = dataStore;
+            _dataState      = dataState;
             _modelFactory   = modelFactory;
         }
 
         public FileViewModel CreateFileView()
             => new(
-                dataStore:      _dataStore,
+                dataState:      _dataState,
                 modelFactory:   _modelFactory);
 
-        private readonly DataStore              _dataStore;
+        private readonly DataStateStore         _dataState;
         private readonly Accounts.ModelFactory  _modelFactory;
     }
 }

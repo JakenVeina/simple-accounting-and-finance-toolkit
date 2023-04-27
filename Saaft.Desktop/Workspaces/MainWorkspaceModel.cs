@@ -10,7 +10,6 @@ using System.Text.Json;
 using System.Windows.Input;
 
 using Saaft.Data;
-using Saaft.Data.Database;
 using Saaft.Desktop.Database;
 
 namespace Saaft.Desktop.Workspaces
@@ -20,10 +19,12 @@ namespace Saaft.Desktop.Workspaces
             IDisposable
     {
         public MainWorkspaceModel(
-            DataStore               dataStore,
-            Database.ModelFactory   modelFactory)
+            Data.Database.Repository    databaseRepository,
+            DataStateStore              dataState,
+            Database.ModelFactory       modelFactory)
         {
             _closeFileCommandExecuted   = new();
+            _databaseRepository         = databaseRepository;
             _newFileCommandExecuted     = new();
             _openFileCommandExecuted    = new();
             _promptRequested            = new();
@@ -31,19 +32,21 @@ namespace Saaft.Desktop.Workspaces
             _subscriptions              = new();
 
             _closeFileCommandExecuted
-                .WithLatestFrom(dataStore, (_, file) => file)
+                .WithLatestFrom(dataState, (_, dataState) => dataState.LoadedFile)
                 .ApplyOperation(TrySaveIfNeeded)
-                .Subscribe(_ => dataStore.Value = null)
+                .Select(_ => Unit.Default)
+                .ApplyOperation(databaseRepository.CloseFile)
+                .Subscribe()
                 .DisposeWith(_subscriptions);
 
             _closeFileCommand = ReactiveCommand.Create(
                 onExecuted: _closeFileCommandExecuted,
-                canExecute: dataStore
+                canExecute: dataState
                     .Select(file => file is not null)
                     .DistinctUntilChanged());
 
-            _file = dataStore
-                .Select(file => file is not null)
+            _file = dataState
+                .Select(dataState => dataState.LoadedFile != Data.Database.FileEntity.None)
                 .DistinctUntilChanged()
                 .Select(isFileOpen => isFileOpen
                     ? modelFactory.CreateFileView()
@@ -51,22 +54,24 @@ namespace Saaft.Desktop.Workspaces
                 .ToReactiveProperty();
 
             _newFileCommandExecuted
-                .WithLatestFrom(dataStore, (_, file) => file)
+                .WithLatestFrom(dataState, (_, dataState) => dataState.LoadedFile)
                 .ApplyOperation(TrySaveIfNeeded)
-                .Subscribe(_ => dataStore.Value = FileEntity.New)
+                .Select(_ => Unit.Default)
+                .ApplyOperation(databaseRepository.LoadNewFile)
+                .Subscribe()
                 .DisposeWith(_subscriptions);
 
             _newFileCommand = ReactiveCommand.Create(
                 onExecuted: _newFileCommandExecuted);
 
             _openFileCommandExecuted
-                .WithLatestFrom(dataStore, (_, file) => file)
+                .WithLatestFrom(dataState, (_, dataState) => dataState.LoadedFile)
                 .ApplyOperation(TrySaveIfNeeded)
-                .Select(file => ReactiveDisposable
+                .Select(loadedFile => ReactiveDisposable
                     .Create(() => new OpenFilePromptModel()
                     {
                         Filter          = _filePromptFilter,
-                        InitialFilePath = file?.FilePath
+                        InitialFilePath = loadedFile.FilePath
                     })
                     .Do(prompt => _promptRequested.OnNext(prompt))
                     .Select(prompt => prompt.Result)
@@ -75,7 +80,7 @@ namespace Saaft.Desktop.Workspaces
                     {
                         using var fileStream = System.IO.File.OpenRead(filePath);
                     
-                        return new FileEntity()
+                        return new Data.Database.FileEntity()
                         {
                             Database    = await JsonSerializer.DeserializeAsync<Data.Database.Entity>(
                                     utf8Json:           fileStream,
@@ -88,23 +93,23 @@ namespace Saaft.Desktop.Workspaces
                     .Switch()
                     .ObserveOn(DispatcherScheduler.Current))
                 .Switch()
-                .Subscribe(file => dataStore.Value = file)
+                .ApplyOperation(databaseRepository.LoadFile)
+                .Subscribe()
                 .DisposeWith(_subscriptions);
 
             _openFileCommand = ReactiveCommand.Create(
                 onExecuted: _openFileCommandExecuted);
 
             _saveFileCommandExecuted
-                .WithLatestFrom(dataStore, (_, file) => file)
-                .WhereNotNull()
+                .WithLatestFrom(dataState, (_, dataState) => dataState.LoadedFile)
                 .ApplyOperation(TrySave)
-                .Subscribe(file => dataStore.Value = file)
+                .Subscribe()
                 .DisposeWith(_subscriptions);
 
             _saveFileCommand = ReactiveCommand.Create(
                 onExecuted: _saveFileCommandExecuted,
-                canExecute: dataStore
-                    .Select(file => (file is not null) && file.HasChanges)
+                canExecute: dataState
+                    .Select(dataState => (dataState.LoadedFile != Data.Database.FileEntity.None) && dataState.LoadedFile.HasChanges)
                     .DistinctUntilChanged());
 
             _title = ReactiveProperty.Create("Simple Accounting and Finance Toolkit");
@@ -146,13 +151,13 @@ namespace Saaft.Desktop.Workspaces
             _subscriptions.Dispose();
         }
 
-        private IObservable<FileEntity?> TrySaveIfNeeded(IObservable<FileEntity?> file)
-            => file
-                .Select(file => ((file is not null) && file.HasChanges)
+        private IObservable<Data.Database.FileEntity> TrySaveIfNeeded(IObservable<Data.Database.FileEntity> loadedFile)
+            => loadedFile
+                .Select(loadedFile => ((loadedFile != Data.Database.FileEntity.None) && loadedFile.HasChanges)
                     ? ReactiveDisposable
                         .Create(() => new DecisionPromptModel()
                         {
-                            Message = $"The file \"{((file.FilePath is null) ? FileEntity.DefaultFilename : Path.GetFileName(file.FilePath))}\' has unsaved changes. Would you like to save before continuing?",
+                            Message = $"The file \"{((loadedFile.FilePath is null) ? Data.Database.FileEntity.DefaultFilename : Path.GetFileName(loadedFile.FilePath))}\' has unsaved changes. Would you like to save before continuing?",
                             Title   = "Save changes?"
                         })
                         .Do(prompt => _promptRequested.OnNext(prompt))
@@ -160,48 +165,48 @@ namespace Saaft.Desktop.Workspaces
                         .Switch()
                         .Select(promptResult => promptResult
                             ? Observable
-                                .Return(file)
+                                .Return(loadedFile)
                                 .ApplyOperation(TrySave)
-                            : Observable.Return(file))
+                            : Observable.Return(loadedFile))
                         .Switch()
-                    : Observable.Return(file))
+                    : Observable.Return(loadedFile))
                 .Switch();
 
-        private IObservable<FileEntity> TrySave(IObservable<FileEntity> file)
-            => file
-                .Select(file => (file.FilePath is string targetFilePath)
-                    ? Observable.Return((file, targetFilePath))
-                    : ReactiveDisposable
-                        .Create(() => new SaveFilePromptModel()
-                        {
-                            Filter          = _filePromptFilter,
-                            InitialFilePath = FileEntity.DefaultFilename,
-                        })
-                        .Do(prompt => _promptRequested.OnNext(prompt))
-                        .Select(prompt => prompt.Result
-                            .Select(targetFilePath => (file, targetFilePath)))
-                        .Switch())
-                .Switch()
-                .Select(@params => Observable.FromAsync(async cancellationToken =>
-                {
-                    using var fileStream = System.IO.File.Open(@params.targetFilePath, FileMode.Create);
-                    
-                    await JsonSerializer.SerializeAsync(
-                        utf8Json:           fileStream,
-                        value:              @params.file.Database,
-                        cancellationToken:  cancellationToken);
-
-                    return @params.file with
+        private IObservable<Data.Database.FileEntity> TrySave(IObservable<Data.Database.FileEntity> loadedFile)
+            => loadedFile
+                .Select(loadedFile => Observable.Return((loadedFile.FilePath is string targetFilePath)
+                        ? Observable.Return((loadedFile, targetFilePath))
+                        : ReactiveDisposable
+                            .Create(() => new SaveFilePromptModel()
+                            {
+                                Filter          = _filePromptFilter,
+                                InitialFilePath = Data.Database.FileEntity.DefaultFilename,
+                            })
+                            .Do(prompt => _promptRequested.OnNext(prompt))
+                            .Select(prompt => prompt.Result
+                                .Select(targetFilePath => (loadedFile, targetFilePath)))
+                            .Switch())
+                    .Switch()
+                    .Select(@params => Observable.FromAsync(async cancellationToken =>
                     {
-                        FilePath    = @params.targetFilePath,
-                        HasChanges  = false
-                    };
-                }))
-                .Switch()
-                .ObserveOn(DispatcherScheduler.Current);
+                        using var fileStream = System.IO.File.Open(@params.targetFilePath, FileMode.Create);
+                    
+                        await JsonSerializer.SerializeAsync(
+                            utf8Json:           fileStream,
+                            value:              @params.loadedFile.Database,
+                            cancellationToken:  cancellationToken);
+
+                        return @params.targetFilePath;
+                    }))
+                    .Switch()
+                    .ObserveOn(DispatcherScheduler.Current)
+                    .ApplyOperation(_databaseRepository.SaveFile)
+                    .Select(_ => loadedFile))
+                .Switch();
 
         private readonly ReactiveCommand                    _closeFileCommand;
         private readonly Subject<Unit>                      _closeFileCommandExecuted;
+        private readonly Data.Database.Repository           _databaseRepository;
         private readonly ReactiveProperty<FileViewModel?>   _file;
         private readonly ReactiveCommand                    _newFileCommand;
         private readonly Subject<Unit>                      _newFileCommandExecuted;

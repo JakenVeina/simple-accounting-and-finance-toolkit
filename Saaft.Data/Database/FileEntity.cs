@@ -5,6 +5,13 @@
         public const string DefaultFilename
             = "Untitled.saaft";
 
+        public static readonly FileEntity None
+            = new()
+            {
+                Database    = Entity.Empty,
+                HasChanges  = false
+            };
+
         public static readonly FileEntity New
             = new()
             { 

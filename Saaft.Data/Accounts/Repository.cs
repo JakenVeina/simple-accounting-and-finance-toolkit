@@ -1,10 +1,10 @@
-﻿using Saaft.Data.Database;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
+
+using Saaft.Data.Auditing;
 
 namespace Saaft.Data.Accounts
 {
@@ -12,21 +12,20 @@ namespace Saaft.Data.Accounts
     {
         public Repository(
             Data.Auditing.Repository    auditingRepository,
-            DataStore                   dataStore,
+            Database.Repository         databaseRepository,
+            DataStateStore              dataState,
             SystemClock                 systemClock)
         {
             _auditingRepository = auditingRepository;
-            _dataStore          = dataStore;
+            _dataState          = dataState;
             _systemClock        = systemClock;
 
-            _currentFile = dataStore
-                .WhereNotNull()
+            var allVersions = databaseRepository.LoadedDatabase
+                .Select(database => database.AccountVersions)
                 .DistinctUntilChanged()
                 .ShareReplay(1);
 
-            _currentVersions = _currentFile
-                .Select(file => file.Database.AccountVersions)
-                .DistinctUntilChanged()
+            _currentVersions = allVersions
                 .Select(versions => versions
                     .Where(version => versions
                         .All(nextVersion => nextVersion.PreviousVersionId != version.Id))
@@ -37,12 +36,7 @@ namespace Saaft.Data.Accounts
                     comparer:       SequenceEqualityComparer<ulong>.Default)
                 .ShareReplay(1);
 
-            var versions = _currentFile
-                .Select(file => file.Database.AccountVersions)
-                .DistinctUntilChanged()
-                .ShareReplay(1);
-
-            _nextAccountId = versions
+            _nextAccountId = allVersions
                 .Select(versions => versions
                     .Select(version => version.AccountId)
                     .DefaultIfEmpty()
@@ -51,7 +45,7 @@ namespace Saaft.Data.Accounts
                 .DistinctUntilChanged()
                 .ShareReplay(1);
 
-            _nextVersionId = versions
+            _nextVersionId = allVersions
                 .Select(versions => versions
                     .Select(version => version.Id)
                     .DefaultIfEmpty()
@@ -64,89 +58,101 @@ namespace Saaft.Data.Accounts
         public IObservable<IReadOnlyList<VersionEntity>> CurrentVersions
             => _currentVersions;
 
-        public IObservable<Unit> Create(IObservable<CreationModel> createRequested)
+        public IObservable<AccountCreatedEvent> Create(IObservable<CreationModel> createRequested)
             => createRequested
                 .WithLatestFrom(
                     Observable.CombineLatest(
-                        _currentFile,
                         _nextAccountId,
                         _nextVersionId,
                         _auditingRepository.NextActionId,
-                        (currentFile, nextAccountId, nextVersionId, nextActionId) => (currentFile, nextAccountId, nextVersionId, nextActionId)),
-                    (model, state) => (model, state))
-                .Do(@params => _dataStore.Value = @params.state.currentFile with
-                {
-                    Database    = @params.state.currentFile.Database with
+                        (nextAccountId, nextVersionId, nextActionId) => (nextAccountId, nextVersionId, nextActionId)),
+                    (model, state) => new AccountCreatedEvent()
                     {
-                        AccountVersions = @params.state.currentFile.Database.AccountVersions
-                            .Add(new()
-                            { 
-                                Id                  = @params.state.nextVersionId,
-                                AccountId           = @params.state.nextAccountId,
-                                CreationId          = @params.state.nextActionId,
-                                Description         = @params.model.Description,
-                                Name                = @params.model.Name,
-                                ParentAccountId     = @params.model.ParentAccountId,
-                                Type                = @params.model.Type
-                            }),
-                        AuditingActions = @params.state.currentFile.Database.AuditingActions
-                            .Add(new()
-                            {
-                                Id          = @params.state.nextActionId,
-                                Performed   = _systemClock.Now,
-                                TypeId      = Auditing.ActionTypes.AccountCreated.Id
-                            })
-                    },
-                    HasChanges  = true
-                })
-                .Select(_ => default(Unit));
+                        Action  = new AuditedActionEntity()
+                        {
+                            Id          = state.nextActionId,
+                            Performed   = _systemClock.Now,
+                            TypeId      = Auditing.ActionTypes.AccountCreated.Id
+                        },
+                        Version = new VersionEntity()
+                        { 
+                            Id                  = state.nextVersionId,
+                            AccountId           = state.nextAccountId,
+                            CreationId          = state.nextActionId,
+                            Description         = model.Description,
+                            Name                = model.Name,
+                            ParentAccountId     = model.ParentAccountId,
+                            Type                = model.Type
+                        }
+                    })
+                .Do(@event => _dataState.Value = _dataState.Value with
+                {
+                    LatestEvent = @event,
+                    LoadedFile  = _dataState.Value.LoadedFile with
+                    {
+                        Database    = _dataState.Value.LoadedFile.Database with
+                        {
+                            AccountVersions = _dataState.Value.LoadedFile.Database.AccountVersions
+                                .Add(@event.Version),
+                            AuditingActions = _dataState.Value.LoadedFile.Database.AuditingActions
+                                .Add(@event.Action)
+                        },
+                        HasChanges  = true
+                    }
+                });
 
-        public IObservable<Unit> Mutate(IObservable<MutationModel> mutateRequested)
+        public IObservable<AccountMutatedEvent> Mutate(IObservable<MutationModel> mutateRequested)
             => mutateRequested
                 .WithLatestFrom(
                     Observable.CombineLatest(
-                        _currentFile,
                         _currentVersions,
                         _nextVersionId,
                         _auditingRepository.NextActionId,
-                        (currentFile, currentVersions, nextVersionId, nextActionId) => (currentFile, currentVersions, nextVersionId, nextActionId)),
-                    (model, state) => (model, state))
-                .Do(@params =>
-                {
-                    var currentVersion = @params.state.currentVersions
-                        .First(version => version.AccountId == @params.model.AccountId);
-                    
-                    _dataStore.Value = @params.state.currentFile with
+                        (currentVersions, nextVersionId, nextActionId) => (currentVersions, nextVersionId, nextActionId)),
+                    (model, state) =>
                     {
-                        Database    = @params.state.currentFile.Database with
+                        var currentVersion = state.currentVersions
+                            .First(version => version.AccountId == model.AccountId);
+
+                        return new AccountMutatedEvent()
                         {
-                            AccountVersions = @params.state.currentFile.Database.AccountVersions
-                                .Replace(currentVersion, currentVersion with
-                                {
-                                    Id                  = @params.state.nextVersionId,
-                                    CreationId          = @params.state.nextActionId,
-                                    Description         = @params.model.Description,
-                                    Name                = @params.model.Name,
-                                    ParentAccountId     = @params.model.ParentAccountId,
-                                    Type                = @params.model.Type
-                                }),
-                            AuditingActions = @params.state.currentFile.Database.AuditingActions
-                                .Add(new()
-                                {
-                                    Id          = @params.state.nextActionId,
-                                    Performed   = _systemClock.Now,
-                                    TypeId      = Auditing.ActionTypes.AccountMutated.Id
-                                })
+                            Action      = new AuditedActionEntity()
+                            {
+                                Id          = state.nextActionId,
+                                Performed   = _systemClock.Now,
+                                TypeId      = Auditing.ActionTypes.AccountMutated.Id
+                            },
+                            NewVersion  = currentVersion with
+                            {
+                                Id                  = state.nextVersionId,
+                                CreationId          = state.nextActionId,
+                                Description         = model.Description,
+                                Name                = model.Name,
+                                ParentAccountId     = model.ParentAccountId,
+                                Type                = model.Type
+                            },
+                            OldVersion  = currentVersion
+                        };
+                    })
+                .Do(@event => _dataState.Value = _dataState.Value with
+                {
+                    LatestEvent = @event,
+                    LoadedFile  = _dataState.Value.LoadedFile with
+                    {
+                        Database    = _dataState.Value.LoadedFile.Database with
+                        {
+                            AccountVersions = _dataState.Value.LoadedFile.Database.AccountVersions
+                                .Replace(@event.OldVersion, @event.NewVersion),
+                            AuditingActions = _dataState.Value.LoadedFile.Database.AuditingActions
+                                .Add(@event.Action)
                         },
                         HasChanges  = true
-                    };
-                })
-                .Select(_ => default(Unit));
+                    }
+                });
 
         private readonly Data.Auditing.Repository                   _auditingRepository;
-        private readonly IObservable<FileEntity>                    _currentFile;
         private readonly IObservable<IReadOnlyList<VersionEntity>>  _currentVersions;
-        private readonly DataStore                                  _dataStore;
+        private readonly DataStateStore                             _dataState;
         private readonly IObservable<ulong>                         _nextAccountId;
         private readonly IObservable<ulong>                         _nextVersionId;
         private readonly SystemClock                                _systemClock;
