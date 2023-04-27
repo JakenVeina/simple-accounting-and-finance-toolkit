@@ -11,13 +11,14 @@ namespace Saaft.Desktop.Accounts
         public ListViewModel(ModelFactory modelFactory)
             => _rootItems = Enum.GetValues<Data.Accounts.Type>()
                 .OrderBy(type => type)
-                .Select(type => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(type)))
-                .CombineLatest(items => items.ToArray().AsReadOnly())
-                .ToReactiveProperty(Array.Empty<ListViewItemModel>());
+                .Select(type => ReactiveDisposable
+                    .Create(() => modelFactory.CreateListViewItem(type))
+                    .ToReactiveProperty())
+                .ToList();
 
-        public ReactiveProperty<IReadOnlyList<ListViewItemModel>> RootItems
+        public IReadOnlyList<ReactiveProperty<ListViewItemModel?>> RootItems
             =>_rootItems;
 
-        private readonly ReactiveProperty<IReadOnlyList<ListViewItemModel>> _rootItems;
+        private readonly IReadOnlyList<ReactiveProperty<ListViewItemModel?>> _rootItems;
     }
 }

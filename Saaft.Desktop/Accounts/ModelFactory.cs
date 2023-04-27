@@ -1,4 +1,6 @@
-﻿namespace Saaft.Desktop.Accounts
+﻿using Saaft.Data;
+
+namespace Saaft.Desktop.Accounts
 {
     public class ModelFactory
     {

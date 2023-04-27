@@ -78,14 +78,13 @@ namespace Saaft.Desktop.Accounts
                 .Subscribe()
                 .DisposeWith(_subscriptions);
 
-            _children = repository.CurrentVersions
-                .Select(versions => versions
-                    .Where(version => version.ParentAccountId == accountId)
-                    .OrderBy(version => version.Name)
-                    .Select(version => version.AccountId)
-                    .ToList())
-                .ApplyOperation(accountIds => ViewAccountIds(accountIds, modelFactory))
-                .ToReactiveProperty(Array.Empty<ListViewItemModel>());
+            _children = repository.ObserveCurrentVersions(
+                    filterPredicate:    version => version.ParentAccountId == accountId,
+                    orderByClause:      versions => versions.OrderBy(version => version.Name),
+                    selector:           version => ReactiveDisposable
+                        .Create(() => modelFactory.CreateListViewItem(version.AccountId))
+                        .ToReactiveProperty())
+                .ToReactiveCollection();
 
             _createChildCommandExecuted
                 .WithLatestFrom(currentVersion, (_, currentVersion) => currentVersion)
@@ -150,15 +149,14 @@ namespace Saaft.Desktop.Accounts
                 .Subscribe()
                 .DisposeWith(_subscriptions);
 
-            _children = repository.CurrentVersions
-                .Select(versions => versions
-                    .Where(version => (version.Type == type)
-                        && (version.ParentAccountId is null))
-                    .OrderBy(version => version.Name)
-                    .Select(version => version.AccountId)
-                    .ToList())
-                .ApplyOperation(accountIds => ViewAccountIds(accountIds, modelFactory))
-                .ToReactiveProperty(Array.Empty<ListViewItemModel>());
+            _children = repository.ObserveCurrentVersions(
+                    filterPredicate:    version => (version.ParentAccountId is null)
+                        && (version.Type == type),
+                    orderByClause:      versions => versions.OrderBy(version => version.Name),
+                    selector:           version => ReactiveDisposable
+                        .Create(() => modelFactory.CreateListViewItem(version.AccountId))
+                        .ToReactiveProperty())
+                .ToReactiveCollection();
 
             _createChildCommand = ReactiveCommand.Create(() => _workspaceLaunchRequested.OnNext(() => modelFactory
                 .CreateFormWorkspace(new CreationModel()
@@ -178,7 +176,7 @@ namespace Saaft.Desktop.Accounts
         public ReactiveCommand AdoptAccountIdCommand
             => _adoptAccountIdCommand;
 
-        public ReactiveProperty<IReadOnlyList<ListViewItemModel>> Children
+        public ReactiveCollection<ReactiveProperty<ListViewItemModel?>> Children
             => _children;
 
         public ReactiveCommand CreateChildCommand
@@ -215,29 +213,17 @@ namespace Saaft.Desktop.Accounts
             _workspaceLaunchRequested.Dispose();
         }
 
-        private static IObservable<IReadOnlyList<ListViewItemModel>> ViewAccountIds(
-                IObservable<IReadOnlyList<ulong>>   accountIds,
-                ModelFactory                        modelFactory)
-            => accountIds
-                .DistinctUntilChanged(accountIds => accountIds.AsEnumerable(), SequenceEqualityComparer<ulong>.Default)
-                .Select(accountIds => (accountIds.Count is 0)
-                    ? Observable.Return(Array.Empty<ListViewItemModel>())
-                    : accountIds
-                        .Select(accountId => ReactiveDisposable.Create(() => modelFactory.CreateListViewItem(accountId)))
-                        .CombineLatest(children => children.ToArray()))
-                .Switch();
-
-        private readonly ulong?                                             _accountId;
-        private readonly ReactiveCommand                                    _adoptAccountIdCommand;
-        private readonly Subject<ulong>                                     _adoptAccountIdCommandExecuted;
-        private readonly ReactiveProperty<IReadOnlyList<ListViewItemModel>> _children;
-        private readonly ReactiveCommand                                    _createChildCommand;
-        private readonly Subject<Unit>?                                     _createChildCommandExecuted;
-        private readonly ReactiveCommand                                    _editCommand;
-        private readonly Subject<Unit>?                                     _editCommandExecuted;
-        private readonly bool                                               _isAccount;
-        private readonly ReactiveProperty<string>                           _name;
-        private readonly CompositeDisposable                                _subscriptions;
-        private readonly Subject<Func<Workspaces.ModelBase>>                _workspaceLaunchRequested;
+        private readonly ulong?                                                     _accountId;
+        private readonly ReactiveCommand                                            _adoptAccountIdCommand;
+        private readonly Subject<ulong>                                             _adoptAccountIdCommandExecuted;
+        private readonly ReactiveCollection<ReactiveProperty<ListViewItemModel?>>   _children;
+        private readonly ReactiveCommand                                            _createChildCommand;
+        private readonly Subject<Unit>?                                             _createChildCommandExecuted;
+        private readonly ReactiveCommand                                            _editCommand;
+        private readonly Subject<Unit>?                                             _editCommandExecuted;
+        private readonly bool                                                       _isAccount;
+        private readonly ReactiveProperty<string>                                   _name;
+        private readonly CompositeDisposable                                        _subscriptions;
+        private readonly Subject<Func<Workspaces.ModelBase>>                        _workspaceLaunchRequested;
     }
 }

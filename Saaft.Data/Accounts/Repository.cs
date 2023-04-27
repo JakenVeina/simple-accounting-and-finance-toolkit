@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Collections;
 using System.Reactive.Linq;
 
 using Saaft.Data.Auditing;
+using Saaft.Data.Database;
 
 namespace Saaft.Data.Accounts
 {
@@ -149,6 +152,69 @@ namespace Saaft.Data.Accounts
                         HasChanges  = true
                     }
                 });
+
+        public IObservable<ReactiveCollectionAction<T>> ObserveCurrentVersions<T>(
+                Func<VersionEntity, bool>                                           filterPredicate,
+                Func<IEnumerable<VersionEntity>, IOrderedEnumerable<VersionEntity>> orderByClause,
+                Func<VersionEntity, T>                                              selector)
+            => _dataState.Events
+                .StartWith(null as DataStateEvent)
+                .WithLatestFrom(
+                    Observable.Zip(
+                        CurrentVersions.StartWith(ImmutableList<VersionEntity>.Empty),
+                        CurrentVersions,
+                        (prior, current) => (prior, current)),
+                    (@event, versions) => @event switch
+                {
+                    null or FileLoadedEvent or NewFileLoadedEvent
+                        => Observable.Return(ReactiveCollectionAction.Reset(versions.current
+                            .Where(filterPredicate)
+                            .ApplyOrderByClause(orderByClause)
+                            .Select(selector)
+                            .ToArray())),
+                    FileClosedEvent
+                        => Observable.Return(ReactiveCollectionAction.Clear<T>()),
+                    AccountCreatedEvent creation
+                        => filterPredicate.Invoke(creation.Version)
+                            ? Observable.Return(ReactiveCollectionAction.Insert(
+                                index:  versions.current
+                                    .Where(filterPredicate)
+                                    .ApplyOrderByClause(orderByClause)
+                                    .IndexOf(creation.Version),
+                                item:   selector.Invoke(creation.Version)))
+                            : Observable.Empty<ReactiveCollectionAction<T>>(),
+                    AccountMutatedEvent mutation
+                        => mutation switch
+                        {
+                            _ when filterPredicate.Invoke(mutation.NewVersion)
+                                => filterPredicate.Invoke(mutation.OldVersion)
+                                    ? Observable.Return((
+                                            oldIndex:   versions.prior
+                                                .Where(filterPredicate)
+                                                .ApplyOrderByClause(orderByClause)
+                                                .IndexOf(mutation.OldVersion),
+                                            newIndex:   versions.current
+                                                .Where(filterPredicate)
+                                                .ApplyOrderByClause(orderByClause)
+                                                .IndexOf(mutation.NewVersion)))
+                                        .Where(movement => movement.oldIndex != movement.newIndex)
+                                        .Select(movement => ReactiveCollectionAction.Move<T>(movement.oldIndex, movement.newIndex))
+                                    : Observable.Return(ReactiveCollectionAction.Insert(
+                                        index:  versions.current
+                                            .Where(filterPredicate)
+                                            .ApplyOrderByClause(orderByClause)
+                                            .IndexOf(mutation.NewVersion),
+                                        item:   selector.Invoke(mutation.NewVersion))),
+                            _ when filterPredicate.Invoke(mutation.OldVersion)
+                                => Observable.Return(ReactiveCollectionAction.Remove<T>(versions.prior
+                                    .Where(filterPredicate)
+                                    .ApplyOrderByClause(orderByClause)
+                                    .IndexOf(mutation.OldVersion))),
+                            _   => Observable.Empty<ReactiveCollectionAction<T>>()
+                        },
+                    _   => Observable.Empty<ReactiveCollectionAction<T>>()
+                })
+                .Merge();
 
         private readonly Data.Auditing.Repository                   _auditingRepository;
         private readonly IObservable<IReadOnlyList<VersionEntity>>  _currentVersions;

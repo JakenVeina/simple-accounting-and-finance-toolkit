@@ -11,28 +11,26 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=Accounts:ListViewModel}">
 
-    <TreeView ItemsSource="{Binding RootItems.Value}">
+    <TreeView ItemsSource="{Binding RootItems, Mode=OneTime}">
         <TreeView.ItemContainerStyle>
             <Style TargetType="TreeViewItem">
                 <Setter Property="IsExpanded" Value="True"/>
             </Style>
         </TreeView.ItemContainerStyle>
         <TreeView.ItemTemplate>
-            <HierarchicalDataTemplate
-                    DataType="{x:Type Accounts:ListViewItemModel}"
-                    ItemsSource="{Binding Children.Value}">
-                <TextBlock Text="{Binding Name.Value}">
+            <HierarchicalDataTemplate ItemsSource="{Binding Value.Children}">
+                <TextBlock Text="{Binding Value.Name.Value}">
                     <b:Interaction.Behaviors>
                         <Interactions:ClickAndDragBehavior
                             DataFormat="Saaft.Desktop.Accounts.AccountId"
-                            DataValue="{Binding AccountId, Mode=OneTime}"
+                            DataValue="{Binding Value.AccountId}"
                             Effects="Move"/>
                         <Interactions:ReceiveDropCommandBehavior
                             DataFormat="Saaft.Desktop.Accounts.AccountId"
-                            Command="{Binding AdoptAccountIdCommand}"/>
+                            Command="{Binding Value.AdoptAccountIdCommand}"/>
                     </b:Interaction.Behaviors>
                     <b:Interaction.Triggers>
-                        <Interactions:ReactiveTrigger Source="{Binding WorkspaceLaunchRequested, Mode=OneTime}">
+                        <Interactions:ReactiveTrigger Source="{Binding Value.WorkspaceLaunchRequested}">
                             <b:InvokeCommandAction
                                 Command="{x:Static Workspaces:Commands.Launch}"
                                 PassEventArgsToCommand="True"/>
@@ -40,8 +38,8 @@
                     </b:Interaction.Triggers>
                     <TextBlock.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="New" Command="{Binding CreateChildCommand, Mode=OneTime}"/>
-                            <MenuItem Header="Edit" Command="{Binding EditCommand, Mode=OneTime}"/>
+                            <MenuItem Header="New" Command="{Binding Value.CreateChildCommand}"/>
+                            <MenuItem Header="Edit" Command="{Binding Value.EditCommand}"/>
                         </ContextMenu>
                     </TextBlock.ContextMenu>
                 </TextBlock>
