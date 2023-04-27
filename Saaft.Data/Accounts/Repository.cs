@@ -39,21 +39,43 @@ namespace Saaft.Data.Accounts
                     comparer:       SequenceEqualityComparer<ulong>.Default)
                 .ShareReplay(1);
 
-            _nextAccountId = allVersions
-                .Select(versions => versions
-                    .Select(version => version.AccountId)
-                    .DefaultIfEmpty()
-                    .Max())
-                .Select(maxAccountId => maxAccountId + 1)
+            _nextAccountId = dataState.Events
+                .StartWith(null as DataStateEvent)
+                .WithLatestFrom(
+                    dataState.Select(dataState => dataState.LoadedFile.Database.AccountVersions),
+                    (@event, versions) => (@event, versions))
+                .Scan(1UL, (nextAccountId, @params) => @params.@event switch
+                {
+                    null or FileLoadedEvent or NewFileLoadedEvent or FileClosedEvent
+                        => @params.versions
+                            .Select(version => version.AccountId)
+                            .DefaultIfEmpty()
+                            .Max() + 1,
+                    AccountCreatedEvent creationEvent
+                        => creationEvent.Version.AccountId + 1,
+                    _   => nextAccountId
+                })
                 .DistinctUntilChanged()
                 .ShareReplay(1);
 
-            _nextVersionId = allVersions
-                .Select(versions => versions
-                    .Select(version => version.Id)
-                    .DefaultIfEmpty()
-                    .Max())
-                .Select(maxVersionId => maxVersionId + 1)
+            _nextVersionId = dataState.Events
+                .StartWith(null as DataStateEvent)
+                .WithLatestFrom(
+                    dataState.Select(dataState => dataState.LoadedFile.Database.AccountVersions),
+                    (@event, versions) => (@event, versions))
+                .Scan(1UL, (nextVersionId, @params) => @params.@event switch
+                {
+                    null or FileLoadedEvent or NewFileLoadedEvent or FileClosedEvent
+                        => @params.versions
+                            .Select(version => version.Id)
+                            .DefaultIfEmpty()
+                            .Max() + 1,
+                    AccountCreatedEvent creationEvent
+                        => creationEvent.Version.Id + 1,
+                    AccountMutatedEvent creationEvent
+                        => creationEvent.NewVersion.Id + 1,
+                    _   => nextVersionId
+                })
                 .DistinctUntilChanged()
                 .ShareReplay(1);
         }

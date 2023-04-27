@@ -2,19 +2,30 @@
 using System.Linq;
 using System.Reactive.Linq;
 
+using Saaft.Data.Database;
+
 namespace Saaft.Data.Auditing
 {
     public class Repository
     {
-        public Repository(Database.Repository databaseRepository)
-            => _nextActionId = databaseRepository.LoadedDatabase
-                .Select(database => database.AuditingActions)
+        public Repository(DataStateStore dataState)
+            => _nextActionId = dataState.Events
+                .StartWith(null as DataStateEvent)
+                .WithLatestFrom(
+                    dataState.Select(dataState => dataState.LoadedFile.Database.AuditingActions),
+                    (@event, actions) => (@event, actions))
+                .Scan(1UL, (nextActionId, @params) => @params.@event switch
+                {
+                    null or FileLoadedEvent or NewFileLoadedEvent or FileClosedEvent
+                        => @params.actions
+                            .Select(action => action.Id)
+                            .DefaultIfEmpty()
+                            .Max() + 1,
+                    AuditedActionEvent actionEvent
+                        => actionEvent.Action.Id + 1,
+                    _   => nextActionId
+                })
                 .DistinctUntilChanged()
-                .Select(actions => actions
-                    .Select(action => action.Id)
-                    .DefaultIfEmpty()
-                    .Max())
-                .Select(maxActionId => maxActionId + 1)
                 .ShareReplay(1);
 
         public IObservable<ulong> NextActionId
