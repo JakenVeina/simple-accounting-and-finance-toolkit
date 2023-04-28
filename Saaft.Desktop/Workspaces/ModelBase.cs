@@ -4,6 +4,6 @@ namespace Saaft.Desktop.Workspaces
 {
     public abstract class ModelBase
     {
-        public abstract ReactiveProperty<string> Title { get; }
+        public abstract ReactiveReadOnlyProperty<string> Title { get; }
     }
 }

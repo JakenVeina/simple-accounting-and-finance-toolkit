@@ -13,12 +13,12 @@ namespace Saaft.Desktop.Accounts
                 .OrderBy(static type => type)
                 .Select(type => ReactiveDisposable
                     .Create(() => modelFactory.CreateListViewItem(type))
-                    .ToReactiveProperty())
+                    .ToReactiveReadOnlyProperty())
                 .ToList();
 
-        public IReadOnlyList<ReactiveProperty<ListViewItemModel?>> RootItems
+        public IReadOnlyList<ReactiveReadOnlyProperty<ListViewItemModel?>> RootItems
             =>_rootItems;
 
-        private readonly IReadOnlyList<ReactiveProperty<ListViewItemModel?>> _rootItems;
+        private readonly IReadOnlyList<ReactiveReadOnlyProperty<ListViewItemModel?>> _rootItems;
     }
 }

@@ -83,7 +83,7 @@ namespace Saaft.Desktop.Accounts
                     orderByClause:      static versions => versions.OrderBy(static version => version.Name),
                     selector:           version => ReactiveDisposable
                         .Create(() => modelFactory.CreateListViewItem(version.AccountId))
-                        .ToReactiveProperty())
+                        .ToReactiveReadOnlyProperty())
                 .ToReactiveCollection();
 
             _createChildCommandExecuted
@@ -118,7 +118,7 @@ namespace Saaft.Desktop.Accounts
             _name = currentVersion
                 .Select(static version => version.Name)
                 .DistinctUntilChanged()
-                .ToReactiveProperty(string.Empty);
+                .ToReactiveReadOnlyProperty(string.Empty);
         }
 
         public ListViewItemModel(
@@ -155,7 +155,7 @@ namespace Saaft.Desktop.Accounts
                     orderByClause:      static versions => versions.OrderBy(static version => version.Name),
                     selector:           version => ReactiveDisposable
                         .Create(() => modelFactory.CreateListViewItem(version.AccountId))
-                        .ToReactiveProperty())
+                        .ToReactiveReadOnlyProperty())
                 .ToReactiveCollection();
 
             _createChildCommand = ReactiveCommand.Create(() => _workspaceLaunchRequested.OnNext(() => modelFactory
@@ -167,7 +167,7 @@ namespace Saaft.Desktop.Accounts
 
             _editCommand = ReactiveCommand.NotSupported;
 
-            _name = ReactiveProperty.Create(type.ToString());
+            _name = ReactiveReadOnlyProperty.Create(type.ToString());
         }
 
         public ulong? AccountId
@@ -176,7 +176,7 @@ namespace Saaft.Desktop.Accounts
         public ReactiveCommand AdoptAccountIdCommand
             => _adoptAccountIdCommand;
 
-        public ReactiveCollection<ReactiveProperty<ListViewItemModel?>> Children
+        public ReactiveCollection<ReactiveReadOnlyProperty<ListViewItemModel?>> Children
             => _children;
 
         public ReactiveCommand CreateChildCommand
@@ -188,7 +188,7 @@ namespace Saaft.Desktop.Accounts
         public bool IsAccount
             => _isAccount;
 
-        public ReactiveProperty<string> Name
+        public ReactiveReadOnlyProperty<string> Name
             => _name;
 
         public IObservable<Func<Workspaces.ModelBase>> WorkspaceLaunchRequested
@@ -213,17 +213,17 @@ namespace Saaft.Desktop.Accounts
             _workspaceLaunchRequested.Dispose();
         }
 
-        private readonly ulong?                                                     _accountId;
-        private readonly ReactiveCommand                                            _adoptAccountIdCommand;
-        private readonly Subject<ulong>                                             _adoptAccountIdCommandExecuted;
-        private readonly ReactiveCollection<ReactiveProperty<ListViewItemModel?>>   _children;
-        private readonly ReactiveCommand                                            _createChildCommand;
-        private readonly Subject<Unit>?                                             _createChildCommandExecuted;
-        private readonly ReactiveCommand                                            _editCommand;
-        private readonly Subject<Unit>?                                             _editCommandExecuted;
-        private readonly bool                                                       _isAccount;
-        private readonly ReactiveProperty<string>                                   _name;
-        private readonly CompositeDisposable                                        _subscriptions;
-        private readonly Subject<Func<Workspaces.ModelBase>>                        _workspaceLaunchRequested;
+        private readonly ulong?                                                             _accountId;
+        private readonly ReactiveCommand                                                    _adoptAccountIdCommand;
+        private readonly Subject<ulong>                                                     _adoptAccountIdCommandExecuted;
+        private readonly ReactiveCollection<ReactiveReadOnlyProperty<ListViewItemModel?>>   _children;
+        private readonly ReactiveCommand                                                    _createChildCommand;
+        private readonly Subject<Unit>?                                                     _createChildCommandExecuted;
+        private readonly ReactiveCommand                                                    _editCommand;
+        private readonly Subject<Unit>?                                                     _editCommandExecuted;
+        private readonly bool                                                               _isAccount;
+        private readonly ReactiveReadOnlyProperty<string>                                   _name;
+        private readonly CompositeDisposable                                                _subscriptions;
+        private readonly Subject<Func<Workspaces.ModelBase>>                                _workspaceLaunchRequested;
     }
 }

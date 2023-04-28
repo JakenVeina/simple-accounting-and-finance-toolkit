@@ -1,63 +1,88 @@
-﻿using System.Reactive;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.Reactive;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 
 namespace System.ComponentModel
 {
     public static class ReactiveProperty
     {
-        public static ReactiveProperty<T> Create<T>(T value)
+        public static ReactiveProperty<T> Create<T>(
+                T           initialValue,
+                ISubject<T> valueSource)
             => new(
-                initialValue:   value,
-                source:         Observable.Empty<T>());
-
-        public static ReactiveProperty<T?> Create<T>(IObservable<T?> source)
-            => new(
-                initialValue:   default,
-                source:         source);
+                errorsSource:   _alwaysValid,
+                initialValue:   initialValue,
+                onValueSet:     valueSource,
+                valueSource:    valueSource);
 
         public static ReactiveProperty<T> Create<T>(
-                IObservable<T>  source,
-                T               initialValue)
+                T                                   initialValue,
+                ISubject<T>                         valueSource,
+                IObservable<IReadOnlyList<object?>> errorSource)
             => new(
+                errorsSource:   errorSource,
                 initialValue:   initialValue,
-                source:         source);
+                onValueSet:     valueSource,
+                valueSource:    valueSource);
+
+        internal static readonly DataErrorsChangedEventArgs ErrorsChangedEventArgs
+            = new(nameof(ReactiveProperty<object>.Value));
 
         internal static readonly PropertyChangedEventArgs ValueChangedEventArgs
             = new(nameof(ReactiveProperty<object>.Value));
+
+        private static readonly IObservable<IReadOnlyList<object?>> _alwaysValid
+            = Observable.Return(Array.Empty<object?>());
     }
 
     public class ReactiveProperty<T>
-        : INotifyPropertyChanged
+        : ReactiveReadOnlyProperty<T>,
+            INotifyDataErrorInfo
     {
         internal ReactiveProperty(
-            T               initialValue,
-            IObservable<T>  source)
+                IObservable<IReadOnlyList<object?>> errorsSource,
+                T                                   initialValue,
+                IObserver<T>                        onValueSet,
+                IObservable<T>                      valueSource)
+            : base(
+                initialValue:   initialValue,
+                valueSource:    valueSource)
         {
-            var pattern = new EventPattern<object?, PropertyChangedEventArgs>(
-                sender: this,
-                e:      ReactiveProperty.ValueChangedEventArgs);
+            _errors     = Array.Empty<object?>();
+            _onValueSet = onValueSet;
 
-            _propertyChanged = source
-                .Do(value => _value = value)
-                .Finally(() => _value = initialValue)
-                .Select(_ => pattern)
-                .ShareReplay(1)
+            var errorsChangedEventPattern = new EventPattern<DataErrorsChangedEventArgs>(this, ReactiveProperty.ErrorsChangedEventArgs);
+            _errorsChanged = errorsSource
+                .Do(errors => _errors = errors)
+                .Finally(() => _errors = Array.Empty<object?>())
+                .Select(_ => errorsChangedEventPattern)
+                .Share()
                 .ToEventPattern();
-
-            _value = initialValue;
         }
 
-        public T Value
-            => _value;
-
-        event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
+        new public T Value
         {
-            add     => _propertyChanged.OnNext += value;
-            remove  => _propertyChanged.OnNext -= value;
+            get => base.Value;
+            set => _onValueSet.OnNext(value);
         }
 
-        private readonly IPropertyChangedEventSource _propertyChanged;
+        bool INotifyDataErrorInfo.HasErrors
+            => _errors.Count is not 0;
 
-        private T _value;
+        event EventHandler<DataErrorsChangedEventArgs>? INotifyDataErrorInfo.ErrorsChanged
+        {
+            add     => _errorsChanged.OnNext += value;
+            remove  => _errorsChanged.OnNext -= value;
+        }
+
+        IEnumerable INotifyDataErrorInfo.GetErrors(string? propertyName)
+            => _errors;
+
+        private readonly IEventPatternSource<DataErrorsChangedEventArgs>    _errorsChanged;
+        private readonly IObserver<T>                                       _onValueSet;
+
+        private IReadOnlyList<object?> _errors;
     }
 }
