@@ -29,6 +29,6 @@ namespace System.Reactive.Linq
 
         public static IObservable<T> WhereNotNull<T>(this IObservable<T?> source)
                 where T : class
-            => source.Where(value => value is not null)!;
+            => source.Where(static value => value is not null)!;
     }
 }

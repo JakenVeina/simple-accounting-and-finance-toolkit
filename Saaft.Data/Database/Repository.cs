@@ -12,7 +12,7 @@ namespace Saaft.Data.Database
             _dataState = dataState;
 
             _loadedDatabase = dataState
-                .Select(state => state.LoadedFile.Database)
+                .Select(static state => state.LoadedFile.Database)
                 .DistinctUntilChanged()
                 .ShareReplay(1);
         }

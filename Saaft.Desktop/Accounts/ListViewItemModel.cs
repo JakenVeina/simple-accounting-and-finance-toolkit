@@ -36,8 +36,8 @@ namespace Saaft.Desktop.Accounts
 
             _adoptAccountIdCommand = ReactiveCommand.Create(
                 onExecuted: _adoptAccountIdCommandExecuted,
-                canExecute: Observable.CombineLatest(currentVersion, repository.CurrentVersions, (currentVersion, currentVersions) => (currentVersion, currentVersions))
-                    .Select(@params =>
+                canExecute: Observable.CombineLatest(currentVersion, repository.CurrentVersions, static (currentVersion, currentVersions) => (currentVersion, currentVersions))
+                    .Select(static @params =>
                     {
                         var invalidNewChildAccountIds = new HashSet<ulong>(@params.currentVersions.Count)
                         {
@@ -64,9 +64,9 @@ namespace Saaft.Desktop.Accounts
                     }));
 
             _adoptAccountIdCommandExecuted
-                .WithLatestFrom(repository.CurrentVersions, (targetAccountId, currentVersions) => currentVersions
+                .WithLatestFrom(repository.CurrentVersions, static (targetAccountId, currentVersions) => currentVersions
                     .First(version => version.AccountId == targetAccountId))
-                .WithLatestFrom(currentVersion, (targetVersion, currentVersion) => new MutationModel()
+                .WithLatestFrom(currentVersion, static (targetVersion, currentVersion) => new MutationModel()
                 {
                     AccountId       = targetVersion.AccountId,
                     Description     = targetVersion.Description,
@@ -80,14 +80,14 @@ namespace Saaft.Desktop.Accounts
 
             _children = repository.ObserveCurrentVersions(
                     filterPredicate:    version => version.ParentAccountId == accountId,
-                    orderByClause:      versions => versions.OrderBy(version => version.Name),
+                    orderByClause:      static versions => versions.OrderBy(static version => version.Name),
                     selector:           version => ReactiveDisposable
                         .Create(() => modelFactory.CreateListViewItem(version.AccountId))
                         .ToReactiveProperty())
                 .ToReactiveCollection();
 
             _createChildCommandExecuted
-                .WithLatestFrom(currentVersion, (_, currentVersion) => currentVersion)
+                .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
                 .Subscribe(currentVersion => _workspaceLaunchRequested.OnNext(() => modelFactory
                     .CreateFormWorkspace(new CreationModel()
                     {
@@ -101,7 +101,7 @@ namespace Saaft.Desktop.Accounts
 
             _editCommandExecuted = new();
             _editCommandExecuted 
-                .WithLatestFrom(currentVersion, (_, currentVersion) => currentVersion)
+                .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
                 .Subscribe(currentVersion => _workspaceLaunchRequested.OnNext(() => modelFactory
                     .CreateFormWorkspace(new MutationModel()
                     {
@@ -116,7 +116,7 @@ namespace Saaft.Desktop.Accounts
             _editCommand = ReactiveCommand.Create(_editCommandExecuted);
 
             _name = currentVersion
-                .Select(version => version.Name)
+                .Select(static version => version.Name)
                 .DistinctUntilChanged()
                 .ToReactiveProperty(string.Empty);
         }
@@ -135,7 +135,7 @@ namespace Saaft.Desktop.Accounts
                 onExecuted: _adoptAccountIdCommandExecuted);
 
             _adoptAccountIdCommandExecuted
-                .WithLatestFrom(repository.CurrentVersions, (targetAccountId, currentVersions) => currentVersions
+                .WithLatestFrom(repository.CurrentVersions, static (targetAccountId, currentVersions) => currentVersions
                     .First(version => version.AccountId == targetAccountId))
                 .Select(targetVersion => new MutationModel()
                 {
@@ -152,7 +152,7 @@ namespace Saaft.Desktop.Accounts
             _children = repository.ObserveCurrentVersions(
                     filterPredicate:    version => (version.ParentAccountId is null)
                         && (version.Type == type),
-                    orderByClause:      versions => versions.OrderBy(version => version.Name),
+                    orderByClause:      static versions => versions.OrderBy(static version => version.Name),
                     selector:           version => ReactiveDisposable
                         .Create(() => modelFactory.CreateListViewItem(version.AccountId))
                         .ToReactiveProperty())

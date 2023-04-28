@@ -13,7 +13,7 @@ namespace Saaft.Data
             _valueSource = new(DataStateEntity.Default);
 
             _events = _valueSource
-                .Select(value => value.LatestEvent)
+                .Select(static value => value.LatestEvent)
                 .Skip(1)
                 .Share();
         }

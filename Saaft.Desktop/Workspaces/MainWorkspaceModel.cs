@@ -32,9 +32,9 @@ namespace Saaft.Desktop.Workspaces
             _subscriptions              = new();
 
             _closeFileCommandExecuted
-                .WithLatestFrom(dataState, (_, dataState) => dataState.LoadedFile)
+                .WithLatestFrom(dataState, static (_, dataState) => dataState.LoadedFile)
                 .ApplyOperation(TrySaveIfNeeded)
-                .Select(_ => Unit.Default)
+                .Select(static _ => Unit.Default)
                 .ApplyOperation(databaseRepository.CloseFile)
                 .Subscribe()
                 .DisposeWith(_subscriptions);
@@ -42,7 +42,7 @@ namespace Saaft.Desktop.Workspaces
             _closeFileCommand = ReactiveCommand.Create(
                 onExecuted: _closeFileCommandExecuted,
                 canExecute: dataState
-                    .Select(file => file is not null)
+                    .Select(static file => file is not null)
                     .DistinctUntilChanged());
 
             _file = dataState
@@ -54,9 +54,9 @@ namespace Saaft.Desktop.Workspaces
                 .ToReactiveProperty();
 
             _newFileCommandExecuted
-                .WithLatestFrom(dataState, (_, dataState) => dataState.LoadedFile)
+                .WithLatestFrom(dataState, static (_, dataState) => dataState.LoadedFile)
                 .ApplyOperation(TrySaveIfNeeded)
-                .Select(_ => Unit.Default)
+                .Select(static _ => Unit.Default)
                 .ApplyOperation(databaseRepository.LoadNewFile)
                 .Subscribe()
                 .DisposeWith(_subscriptions);
@@ -65,7 +65,7 @@ namespace Saaft.Desktop.Workspaces
                 onExecuted: _newFileCommandExecuted);
 
             _openFileCommandExecuted
-                .WithLatestFrom(dataState, (_, dataState) => dataState.LoadedFile)
+                .WithLatestFrom(dataState, static (_, dataState) => dataState.LoadedFile)
                 .ApplyOperation(TrySaveIfNeeded)
                 .Select(loadedFile => ReactiveDisposable
                     .Create(() => new OpenFilePromptModel()
@@ -74,9 +74,9 @@ namespace Saaft.Desktop.Workspaces
                         InitialFilePath = loadedFile.FilePath
                     })
                     .Do(prompt => _promptRequested.OnNext(prompt))
-                    .Select(prompt => prompt.Result)
+                    .Select(static prompt => prompt.Result)
                     .Switch()
-                    .Select(filePath => Observable.FromAsync(async cancellationToken =>
+                    .Select(static filePath => Observable.FromAsync(async cancellationToken =>
                     {
                         using var fileStream = System.IO.File.OpenRead(filePath);
                     
@@ -101,7 +101,7 @@ namespace Saaft.Desktop.Workspaces
                 onExecuted: _openFileCommandExecuted);
 
             _saveFileCommandExecuted
-                .WithLatestFrom(dataState, (_, dataState) => dataState.LoadedFile)
+                .WithLatestFrom(dataState, static (_, dataState) => dataState.LoadedFile)
                 .ApplyOperation(TrySave)
                 .Subscribe()
                 .DisposeWith(_subscriptions);
@@ -109,7 +109,7 @@ namespace Saaft.Desktop.Workspaces
             _saveFileCommand = ReactiveCommand.Create(
                 onExecuted: _saveFileCommandExecuted,
                 canExecute: dataState
-                    .Select(dataState => (dataState.LoadedFile != Data.Database.FileEntity.None) && dataState.LoadedFile.HasChanges)
+                    .Select(static dataState => (dataState.LoadedFile != Data.Database.FileEntity.None) && dataState.LoadedFile.HasChanges)
                     .DistinctUntilChanged());
 
             _title = ReactiveProperty.Create("Simple Accounting and Finance Toolkit");
@@ -161,7 +161,7 @@ namespace Saaft.Desktop.Workspaces
                             Title   = "Save changes?"
                         })
                         .Do(prompt => _promptRequested.OnNext(prompt))
-                        .Select(prompt => prompt.Result)
+                        .Select(static prompt => prompt.Result)
                         .Switch()
                         .Select(promptResult => promptResult
                             ? Observable
@@ -177,17 +177,17 @@ namespace Saaft.Desktop.Workspaces
                 .Select(loadedFile => Observable.Return((loadedFile.FilePath is string targetFilePath)
                         ? Observable.Return((loadedFile, targetFilePath))
                         : ReactiveDisposable
-                            .Create(() => new SaveFilePromptModel()
+                            .Create(static () => new SaveFilePromptModel()
                             {
                                 Filter          = _filePromptFilter,
                                 InitialFilePath = Data.Database.FileEntity.DefaultFilename,
                             })
                             .Do(prompt => _promptRequested.OnNext(prompt))
-                            .Select(prompt => prompt.Result
-                                .Select(targetFilePath => (loadedFile, targetFilePath)))
-                            .Switch())
+                            .Select(static prompt => prompt.Result)
+                            .Switch()
+                            .Select(targetFilePath => (loadedFile, targetFilePath)))
                     .Switch()
-                    .Select(@params => Observable.FromAsync(async cancellationToken =>
+                    .Select(static @params => Observable.FromAsync(async cancellationToken =>
                     {
                         using var fileStream = System.IO.File.Open(@params.targetFilePath, FileMode.Create);
                     

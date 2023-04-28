@@ -13,9 +13,9 @@ namespace System.Linq
                 this    IEnumerable<T>  source,
                         T               item)
             => source
-                    .Select((sourceItem, index) => (sourceItem, index))
+                    .Select(static (sourceItem, index) => (sourceItem, index))
                     .Where(@params => EqualityComparer<T>.Default.Equals(@params.sourceItem, item))
-                    .Select(@params => @params.index.ToNullable())
+                    .Select(static @params => @params.index.ToNullable())
                     .FirstOrDefault()
                 ?? -1;
     }

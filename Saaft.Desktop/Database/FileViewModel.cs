@@ -18,7 +18,7 @@ namespace Saaft.Desktop.Database
             _accountsList = modelFactory.CreateListView();
 
             _name = dataState
-                .Select(dataState => string.Concat(
+                .Select(static dataState => string.Concat(
                     (dataState.LoadedFile.FilePath is null)
                         ? FileEntity.DefaultFilename
                         : Path.GetFileName(dataState.LoadedFile.FilePath),

@@ -28,7 +28,7 @@ namespace Saaft.Desktop.Accounts
                 validator:      name => Observable.CombineLatest(
                     name,
                     repository.CurrentVersions,
-                    (name, versions) => name switch
+                    static (name, versions) => name switch
                     {
                         _ when string.IsNullOrWhiteSpace(name)
                             => new[] { ValueIsRequiredError.Default },
@@ -43,7 +43,7 @@ namespace Saaft.Desktop.Accounts
                     ? repository.CurrentVersions
                         .Select(versions => versions
                             .Where(version => version.AccountId == parentAccountId)
-                            .Select(version => version.Name)
+                            .Select(static version => version.Name)
                             .FirstOrDefault())
                     : Observable.Return<string?>(null))
                 .ToReactiveProperty();
@@ -51,20 +51,20 @@ namespace Saaft.Desktop.Accounts
             _saveCommand = ReactiveCommand.Create(
                 onExecuted: _saveCommandExecuted,
                 canExecute: _name.HasErrors
-                    .Select(hasErrors => !hasErrors));
+                    .Select(static hasErrors => !hasErrors));
 
             _title = ReactiveProperty.Create("Create New Account");
 
             _saveCompleted = _saveCommandExecuted
-                .WithLatestFrom(_description,           (_, description) => description)
-                .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
+                .WithLatestFrom(_description,           static (_, description) => description)
+                .WithLatestFrom(_name.WhereNotNull(),   static (description, name) => (description, name))
                 .Select(@params => model with
                 {
                     Description = @params.description,
                     Name        = @params.name
                 })
                 .ApplyOperation(repository.Create)
-                .Select(_ => Unit.Default)
+                .Select(static _ => Unit.Default)
                 .Share();
         }
 
@@ -97,7 +97,7 @@ namespace Saaft.Desktop.Accounts
                     ? repository.CurrentVersions
                         .Select(versions => versions
                             .Where(version => version.AccountId == parentAccountId)
-                            .Select(version => version.Name)
+                            .Select(static version => version.Name)
                             .FirstOrDefault())
                     : Observable.Return<string?>(null))
                 .ToReactiveProperty();
@@ -108,20 +108,20 @@ namespace Saaft.Desktop.Accounts
                     _description.Select(description => description != model.Description),
                     _name.Select(name => name != model.Name),
                     _name.HasErrors,
-                    (isDescriptionDirty, isNameDirty, nameHasErrors) => (isDescriptionDirty || isNameDirty) && (!nameHasErrors)));
+                    static (isDescriptionDirty, isNameDirty, nameHasErrors) => (isDescriptionDirty || isNameDirty) && (!nameHasErrors)));
 
             _title = ReactiveProperty.Create("Edit Account");
 
             _saveCompleted = _saveCommandExecuted
-                .WithLatestFrom(_description,           (_, description) => description)
-                .WithLatestFrom(_name.WhereNotNull(),   (description, name) => (description, name))
+                .WithLatestFrom(_description,           static (_, description) => description)
+                .WithLatestFrom(_name.WhereNotNull(),   static (description, name) => (description, name))
                 .Select(@params => model with
                 {
                     Description = @params.description,
                     Name        = @params.name
                 })
                 .ApplyOperation(repository.Mutate)
-                .Select(_ => Unit.Default)
+                .Select(static _ => Unit.Default)
                 .Share();
         }
 

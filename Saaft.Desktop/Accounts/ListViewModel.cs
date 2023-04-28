@@ -10,7 +10,7 @@ namespace Saaft.Desktop.Accounts
     {
         public ListViewModel(ModelFactory modelFactory)
             => _rootItems = Enum.GetValues<Data.Accounts.Type>()
-                .OrderBy(type => type)
+                .OrderBy(static type => type)
                 .Select(type => ReactiveDisposable
                     .Create(() => modelFactory.CreateListViewItem(type))
                     .ToReactiveProperty())

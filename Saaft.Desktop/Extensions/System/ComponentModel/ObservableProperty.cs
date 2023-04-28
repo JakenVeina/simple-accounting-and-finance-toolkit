@@ -24,7 +24,7 @@ namespace System.ComponentModel
         public ObservableProperty(T initialValue)
             : this(
                   initialValue: initialValue,
-                  validator:    value => value.Select(_ => Array.Empty<object?>()))
+                  validator:    static value => value.Select(static _ => Array.Empty<object?>()))
         { }
 
         public ObservableProperty(
@@ -48,7 +48,7 @@ namespace System.ComponentModel
                 .ToEventPattern();
 
             _hasErrors = _errorsSource
-                .Select(errors => errors.Count is not 0)
+                .Select(static errors => errors.Count is not 0)
                 .DistinctUntilChanged();
 
             var propertyChangedEventPattern = new EventPattern<object?, PropertyChangedEventArgs>(this, ObservableProperty.ValueChangedEventArgs);

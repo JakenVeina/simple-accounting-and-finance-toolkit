@@ -8,13 +8,13 @@ namespace System.Windows.Input
     {
         static ReactiveCommand()
         {
-            _canAlwaysExecutePredicate  = _ => true;
+            _canAlwaysExecutePredicate  = static _ => true;
             _canAlwaysExecute           = Observable.Return(_canAlwaysExecutePredicate);
-            _canNeverExecutePredicate   = _ => false;
+            _canNeverExecutePredicate   = static _ => false;
 
             NotSupported = new(
                 canExecute: Observable.Return(_canNeverExecutePredicate),
-                onExecuted: Observer.Create<object?>(_ => { }));
+                onExecuted: Observer.Create<object?>(static _ => { }));
         }
 
         public static readonly ReactiveCommand NotSupported;
@@ -34,14 +34,14 @@ namespace System.Windows.Input
                 IObservable<bool>   canExecute)
             => new(
                 canExecute: canExecute
-                    .Select(canExecute => canExecute
+                    .Select(static canExecute => canExecute
                         ? _canAlwaysExecutePredicate
                         : _canNeverExecutePredicate),
                 onExecuted: Observer.Create<object?>(_ => onExecuted.OnNext(default)));
 
         public static ReactiveCommand Create<T>(IObserver<T> onExecuted)
             => new(
-                canExecute: Observable.Return(new Predicate<object?>(parameter => parameter switch
+                canExecute: Observable.Return(new Predicate<object?>(static parameter => parameter switch
                 {
                     null    => true,
                     T value => true,
@@ -59,7 +59,7 @@ namespace System.Windows.Input
                 where T : struct
             => new(
                 canExecute: canExecute
-                    .Select(canExecutePredicate => new Predicate<object?>(parameter => parameter switch
+                    .Select(static canExecutePredicate => new Predicate<object?>(parameter => parameter switch
                     {
                         null    => canExecutePredicate.Invoke(default),
                         T value => canExecutePredicate.Invoke(value),
@@ -82,7 +82,7 @@ namespace System.Windows.Input
 
             _canExecuteChanged = canExecute
                 .Do(canExecute => _canExecute = canExecute)
-                .Select(_ => Unit.Default)
+                .Select(static _ => Unit.Default)
                 .Share()
                 .ToEventPattern(sender: this);
         }

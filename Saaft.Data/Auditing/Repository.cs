@@ -12,9 +12,9 @@ namespace Saaft.Data.Auditing
             => _nextActionId = dataState.Events
                 .StartWith(null as DataStateEvent)
                 .WithLatestFrom(
-                    dataState.Select(dataState => dataState.LoadedFile.Database.AuditingActions),
-                    (@event, actions) => (@event, actions))
-                .Scan(1UL, (nextActionId, @params) => @params.@event switch
+                    dataState.Select(static dataState => dataState.LoadedFile.Database.AuditingActions),
+                    static (@event, actions) => (@event, actions))
+                .Scan(1UL, static (nextActionId, @params) => @params.@event switch
                 {
                     null or FileLoadedEvent or NewFileLoadedEvent or FileClosedEvent
                         => @params.actions

@@ -32,19 +32,19 @@ namespace Saaft.Data.Accounts
                 .Select(versions => versions
                     .Where(version => versions
                         .All(nextVersion => nextVersion.PreviousVersionId != version.Id))
-                    .OrderBy(version => version.Id)
+                    .OrderBy(static version => version.Id)
                     .ToList())
                 .DistinctUntilChanged(
-                    keySelector:    versions => versions.Select(version => version.Id),
+                    keySelector:    static versions => versions.Select(version => version.Id),
                     comparer:       SequenceEqualityComparer<ulong>.Default)
                 .ShareReplay(1);
 
             _nextAccountId = dataState.Events
                 .StartWith(null as DataStateEvent)
                 .WithLatestFrom(
-                    dataState.Select(dataState => dataState.LoadedFile.Database.AccountVersions),
-                    (@event, versions) => (@event, versions))
-                .Scan(1UL, (nextAccountId, @params) => @params.@event switch
+                    dataState.Select(static dataState => dataState.LoadedFile.Database.AccountVersions),
+                    static (@event, versions) => (@event, versions))
+                .Scan(1UL, static (nextAccountId, @params) => @params.@event switch
                 {
                     null or FileLoadedEvent or NewFileLoadedEvent or FileClosedEvent
                         => @params.versions
@@ -61,9 +61,9 @@ namespace Saaft.Data.Accounts
             _nextVersionId = dataState.Events
                 .StartWith(null as DataStateEvent)
                 .WithLatestFrom(
-                    dataState.Select(dataState => dataState.LoadedFile.Database.AccountVersions),
-                    (@event, versions) => (@event, versions))
-                .Scan(1UL, (nextVersionId, @params) => @params.@event switch
+                    dataState.Select(static dataState => dataState.LoadedFile.Database.AccountVersions),
+                    static (@event, versions) => (@event, versions))
+                .Scan(1UL, static (nextVersionId, @params) => @params.@event switch
                 {
                     null or FileLoadedEvent or NewFileLoadedEvent or FileClosedEvent
                         => @params.versions
@@ -90,7 +90,7 @@ namespace Saaft.Data.Accounts
                         _nextAccountId,
                         _nextVersionId,
                         _auditingRepository.NextActionId,
-                        (nextAccountId, nextVersionId, nextActionId) => (nextAccountId, nextVersionId, nextActionId)),
+                        static (nextAccountId, nextVersionId, nextActionId) => (nextAccountId, nextVersionId, nextActionId)),
                     (model, state) => new AccountCreatedEvent()
                     {
                         Action  = new AuditedActionEntity()
@@ -133,7 +133,7 @@ namespace Saaft.Data.Accounts
                         _currentVersions,
                         _nextVersionId,
                         _auditingRepository.NextActionId,
-                        (currentVersions, nextVersionId, nextActionId) => (currentVersions, nextVersionId, nextActionId)),
+                        static (currentVersions, nextVersionId, nextActionId) => (currentVersions, nextVersionId, nextActionId)),
                     (model, state) =>
                     {
                         var currentVersion = state.currentVersions
@@ -185,7 +185,7 @@ namespace Saaft.Data.Accounts
                     Observable.Zip(
                         CurrentVersions.StartWith(ImmutableList<VersionEntity>.Empty),
                         CurrentVersions,
-                        (prior, current) => (prior, current)),
+                        static (prior, current) => (prior, current)),
                     (@event, versions) => @event switch
                 {
                     null or FileLoadedEvent or NewFileLoadedEvent
