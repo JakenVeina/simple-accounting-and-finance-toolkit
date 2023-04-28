@@ -48,7 +48,7 @@ namespace System.Collections.Specialized
                     Items.Insert(moveAction.NewIndex, movedItem);
                     return new(
                         sender: this,
-                        e:      new(NotifyCollectionChangedAction.Move, movedItem, moveAction.OldIndex, moveAction.NewIndex));
+                        e:      new(NotifyCollectionChangedAction.Move, movedItem, moveAction.NewIndex, moveAction.OldIndex));
 
                 case ReactiveCollectionRemoveAction<T> removeAction:
                     var removedItem = Items[removeAction.Index];
