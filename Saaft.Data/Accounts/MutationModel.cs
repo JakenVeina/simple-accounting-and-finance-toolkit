@@ -2,14 +2,14 @@
 {
     public record MutationModel
     {
-        public ulong AccountId { get; set; }
+        public ulong AccountId { get; init; }
 
-        public ulong? ParentAccountId { get; set; }
+        public ulong? ParentAccountId { get; init; }
 
-        public string? Description { get; set; }
+        public string? Description { get; init; }
 
-        public required string Name { get; set; }
+        public required string Name { get; init; }
 
-        public required Type Type { get; set; }
+        public required Type Type { get; init; }
     }
 }
