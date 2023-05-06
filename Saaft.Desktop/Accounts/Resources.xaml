@@ -6,6 +6,6 @@
     <DataTemplate DataType="{x:Type Accounts:FormWorkspaceModel}">  <Accounts:FormWorkspace/>   </DataTemplate>
     <DataTemplate DataType="{x:Type Accounts:ListViewModel}">       <Accounts:ListView/>        </DataTemplate>
 
-    <DataTemplate DataType="Accounts:NameExistsError"><TextBlock>A value is required.</TextBlock></DataTemplate>
+    <DataTemplate DataType="{x:Type Accounts:NameExistsError}"><TextBlock>Name is already in use.</TextBlock></DataTemplate>
     
 </ResourceDictionary>
