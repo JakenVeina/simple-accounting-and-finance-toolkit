@@ -127,7 +127,7 @@ namespace Saaft.Desktop.Workspaces
         public ReactiveCommand OpenFileCommand
             => _openFileCommand;
 
-        public IObservable<object> PromptRequested
+        public IObservable<PromptModelBase> PromptRequested
             => _promptRequested;
 
         public ReactiveCommand SaveFileCommand
@@ -212,7 +212,7 @@ namespace Saaft.Desktop.Workspaces
         private readonly Subject<Unit>                              _newFileCommandExecuted;
         private readonly ReactiveCommand                            _openFileCommand;
         private readonly Subject<Unit>                              _openFileCommandExecuted;
-        private readonly Subject<object>                            _promptRequested;
+        private readonly Subject<PromptModelBase>                   _promptRequested;
         private readonly ReactiveCommand                            _saveFileCommand;
         private readonly Subject<Unit>                              _saveFileCommandExecuted;
         private readonly CompositeDisposable                        _subscriptions;

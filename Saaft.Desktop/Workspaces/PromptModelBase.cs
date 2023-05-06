@@ -3,8 +3,14 @@ using System.Reactive.Subjects;
 
 namespace Saaft.Desktop.Workspaces
 {
-    public abstract class PromptModelBase<T>
+    public abstract class PromptModelBase
         : DisposableBase
+    {
+        public abstract void Cancel();
+    }
+
+    public abstract class PromptModelBase<T>
+        : PromptModelBase
     {
         protected PromptModelBase()
             => _result = new(1);
@@ -12,7 +18,7 @@ namespace Saaft.Desktop.Workspaces
         public IObservable<T> Result
             => _result;
 
-        public void Cancel()
+        public sealed override void Cancel()
             => _result.OnCompleted();
 
         public void SetResult(T result)
