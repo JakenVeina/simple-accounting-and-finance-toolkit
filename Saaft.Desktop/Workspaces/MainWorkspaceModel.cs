@@ -9,7 +9,6 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using System.Windows.Input;
 
-using Saaft.Data;
 using Saaft.Desktop.Database;
 
 namespace Saaft.Desktop.Workspaces
@@ -19,9 +18,9 @@ namespace Saaft.Desktop.Workspaces
             IDisposable
     {
         public MainWorkspaceModel(
-            Data.Database.Repository    databaseRepository,
-            DataStateStore              dataState,
-            Database.ModelFactory       modelFactory)
+            Data.Database.Repository        databaseRepository,
+            Data.Database.FileStateStore    fileState,
+            Database.ModelFactory           modelFactory)
         {
             _closeFileCommandExecuted   = new();
             _databaseRepository         = databaseRepository;
@@ -32,7 +31,7 @@ namespace Saaft.Desktop.Workspaces
             _subscriptions              = new();
 
             _closeFileCommandExecuted
-                .WithLatestFrom(dataState, static (_, dataState) => dataState.LoadedFile)
+                .WithLatestFrom(fileState, static (_, fileState) => fileState.LoadedFile)
                 .ApplyOperation(TrySaveIfNeeded)
                 .Select(static _ => Unit.Default)
                 .ApplyOperation(databaseRepository.CloseFile)
@@ -41,12 +40,12 @@ namespace Saaft.Desktop.Workspaces
 
             _closeFileCommand = ReactiveCommand.Create(
                 onExecuted: _closeFileCommandExecuted,
-                canExecute: dataState
-                    .Select(static file => file is not null)
+                canExecute: fileState
+                    .Select(static fileState => fileState.LoadedFile != Data.Database.FileEntity.None)
                     .DistinctUntilChanged());
 
-            _file = dataState
-                .Select(dataState => dataState.LoadedFile != Data.Database.FileEntity.None)
+            _file = fileState
+                .Select(fileState => fileState.LoadedFile != Data.Database.FileEntity.None)
                 .DistinctUntilChanged()
                 .Select(isFileOpen => isFileOpen
                     ? modelFactory.CreateFileView()
@@ -54,7 +53,7 @@ namespace Saaft.Desktop.Workspaces
                 .ToReactiveReadOnlyProperty();
 
             _newFileCommandExecuted
-                .WithLatestFrom(dataState, static (_, dataState) => dataState.LoadedFile)
+                .WithLatestFrom(fileState, static (_, fileState) => fileState.LoadedFile)
                 .ApplyOperation(TrySaveIfNeeded)
                 .Select(static _ => Unit.Default)
                 .ApplyOperation(databaseRepository.LoadNewFile)
@@ -65,7 +64,7 @@ namespace Saaft.Desktop.Workspaces
                 onExecuted: _newFileCommandExecuted);
 
             _openFileCommandExecuted
-                .WithLatestFrom(dataState, static (_, dataState) => dataState.LoadedFile)
+                .WithLatestFrom(fileState, static (_, fileState) => fileState.LoadedFile)
                 .ApplyOperation(TrySaveIfNeeded)
                 .Select(loadedFile => ReactiveDisposable
                     .Create(() => new OpenFilePromptModel()
@@ -101,15 +100,15 @@ namespace Saaft.Desktop.Workspaces
                 onExecuted: _openFileCommandExecuted);
 
             _saveFileCommandExecuted
-                .WithLatestFrom(dataState, static (_, dataState) => dataState.LoadedFile)
+                .WithLatestFrom(fileState, static (_, fileState) => fileState.LoadedFile)
                 .ApplyOperation(TrySave)
                 .Subscribe()
                 .DisposeWith(_subscriptions);
 
             _saveFileCommand = ReactiveCommand.Create(
                 onExecuted: _saveFileCommandExecuted,
-                canExecute: dataState
-                    .Select(static dataState => (dataState.LoadedFile != Data.Database.FileEntity.None) && dataState.LoadedFile.HasChanges)
+                canExecute: fileState
+                    .Select(static fileState => (fileState.LoadedFile != Data.Database.FileEntity.None) && fileState.LoadedFile.HasChanges)
                     .DistinctUntilChanged());
 
             _title = ReactiveReadOnlyProperty.Create("Simple Accounting and Finance Toolkit");

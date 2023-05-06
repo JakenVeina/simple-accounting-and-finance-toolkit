@@ -1,4 +1,4 @@
-﻿using Saaft.Data;
+﻿using Saaft.Data.Database;
 
 namespace Saaft.Desktop.Workspaces
 {
@@ -6,7 +6,7 @@ namespace Saaft.Desktop.Workspaces
     {
         public ModelFactory(
             Data.Database.Repository    databaseRepository,
-            DataStateStore              dataState,
+            FileStateStore              dataState,
             Database.ModelFactory       modelFactory)
         {
             _databaseRepository = databaseRepository;
@@ -17,11 +17,11 @@ namespace Saaft.Desktop.Workspaces
         public MainWorkspaceModel CreateMain()
             => new(
                 databaseRepository: _databaseRepository,
-                dataState:          _dataState,
+                fileState:          _dataState,
                 modelFactory:       _modelFactory);
 
         private readonly Data.Database.Repository   _databaseRepository;
-        private readonly DataStateStore             _dataState;
+        private readonly FileStateStore             _dataState;
         private readonly Database.ModelFactory      _modelFactory;
     }
 }

@@ -8,11 +8,11 @@ namespace Saaft.Data.Auditing
 {
     public class Repository
     {
-        public Repository(DataStateStore dataState)
-            => _nextActionId = dataState.Events
-                .StartWith(null as DataStateEvent)
+        public Repository(FileStateStore fileState)
+            => _nextActionId = fileState.Events
+                .StartWith(null as FileStateEvent)
                 .WithLatestFrom(
-                    dataState.Select(static dataState => dataState.LoadedFile.Database.AuditingActions),
+                    fileState.Select(static fileState => fileState.LoadedFile.Database.AuditingActions),
                     static (@event, actions) => (@event, actions))
                 .Scan(1UL, static (nextActionId, @params) => @params.@event switch
                 {

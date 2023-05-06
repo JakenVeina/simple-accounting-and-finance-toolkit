@@ -1,7 +1,9 @@
-﻿namespace Saaft.Data.Auditing
+﻿using Saaft.Data.Database;
+
+namespace Saaft.Data.Auditing
 {
     public class AuditedActionEvent
-        : DataStateEvent
+        : FileStateEvent
     {
         public required AuditedActionEntity Action { get; init; }
     }

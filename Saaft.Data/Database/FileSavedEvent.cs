@@ -1,7 +1,7 @@
 ﻿namespace Saaft.Data.Database
 {
     public class FileSavedEvent
-        : DataStateEvent
+        : FileStateEvent
     {
         public required string NewFilePath { get; init; }
         

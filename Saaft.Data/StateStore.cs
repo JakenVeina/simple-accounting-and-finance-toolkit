@@ -1,16 +1,18 @@
 ﻿using System;
+using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Saaft.Data
 {
-    public sealed class DataStateStore
-        : IObservable<DataStateEntity>,
-            IDisposable
+    public class StateStore<TEntity, TEvent>
+            : IObservable<TEntity>,
+                IDisposable
+        where TEntity : StateEntity<TEvent>
     {
-        public DataStateStore()
+        public StateStore(TEntity initialValue)
         {
-            _valueSource = new(DataStateEntity.Default);
+            _valueSource = new(initialValue);
 
             _events = _valueSource
                 .Select(static value => value.LatestEvent)
@@ -18,16 +20,16 @@ namespace Saaft.Data
                 .Share();
         }
 
-        public IObservable<DataStateEvent> Events
+        public IObservable<TEvent> Events
             => _events;
 
-        public DataStateEntity Value
+        public TEntity Value
         {
             get => _valueSource.Value;
             set => _valueSource.OnNext(value);
         }
 
-        public IDisposable Subscribe(IObserver<DataStateEntity> observer)
+        public IDisposable Subscribe(IObserver<TEntity> observer)
             => _valueSource.Subscribe(observer);
 
         public void Dispose()
@@ -36,7 +38,7 @@ namespace Saaft.Data
             _valueSource.Dispose();
         }
 
-        private readonly IObservable<DataStateEvent>        _events;
-        private readonly BehaviorSubject<DataStateEntity>   _valueSource;
+        private readonly IObservable<TEvent>        _events;
+        private readonly BehaviorSubject<TEntity>   _valueSource;
     }
 }

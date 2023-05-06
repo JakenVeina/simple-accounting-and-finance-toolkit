@@ -7,12 +7,12 @@ namespace Saaft.Data.Database
 {
     public class Repository
     {
-        public Repository(DataStateStore dataState)
+        public Repository(FileStateStore fileState)
         {
-            _dataState = dataState;
+            _fileState = fileState;
 
-            _loadedDatabase = dataState
-                .Select(static state => state.LoadedFile.Database)
+            _loadedDatabase = fileState
+                .Select(static fileState => fileState.LoadedFile.Database)
                 .DistinctUntilChanged()
                 .ShareReplay(1);
         }
@@ -24,9 +24,9 @@ namespace Saaft.Data.Database
             => closeFileRequested
                 .Select(_ => new FileClosedEvent()
                 {
-                    File = _dataState.Value.LoadedFile
+                    File = _fileState.Value.LoadedFile
                 })
-                .Do(@event => _dataState.Value = _dataState.Value with
+                .Do(@event => _fileState.Value = _fileState.Value with
                 {
                     LatestEvent = @event,
                     LoadedFile  = FileEntity.None
@@ -37,9 +37,9 @@ namespace Saaft.Data.Database
                 .Select(newFile => new FileLoadedEvent()
                 {
                     NewFile = newFile,
-                    OldFile = _dataState.Value.LoadedFile
+                    OldFile = _fileState.Value.LoadedFile
                 })
-                .Do(@event => _dataState.Value = _dataState.Value with
+                .Do(@event => _fileState.Value = _fileState.Value with
                 {
                     LatestEvent = @event,
                     LoadedFile  = @event.NewFile
@@ -49,9 +49,9 @@ namespace Saaft.Data.Database
             => loadNewFileRequested
                 .Select(_ => new NewFileLoadedEvent()
                 {
-                    OldFile = _dataState.Value.LoadedFile
+                    OldFile = _fileState.Value.LoadedFile
                 })
-                .Do(@event => _dataState.Value = _dataState.Value with
+                .Do(@event => _fileState.Value = _fileState.Value with
                 {
                     LatestEvent = @event,
                     LoadedFile  = FileEntity.New
@@ -62,19 +62,19 @@ namespace Saaft.Data.Database
                 .Select(filePath => new FileSavedEvent()
                 {
                     NewFilePath = filePath,
-                    OldFilePath = _dataState.Value.LoadedFile.FilePath
+                    OldFilePath = _fileState.Value.LoadedFile.FilePath
                 })
-                .Do(@event => _dataState.Value = _dataState.Value with
+                .Do(@event => _fileState.Value = _fileState.Value with
                 {
                     LatestEvent = @event,
-                    LoadedFile  = _dataState.Value.LoadedFile with
+                    LoadedFile  = _fileState.Value.LoadedFile with
                     {
                         FilePath    = @event.NewFilePath,
                         HasChanges  = false
                     }
                 });
 
-        private readonly DataStateStore         _dataState;
+        private readonly FileStateStore         _fileState;
         private readonly IObservable<Entity>    _loadedDatabase;
     }
 }

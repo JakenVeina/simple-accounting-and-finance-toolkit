@@ -1,7 +1,7 @@
 ﻿namespace Saaft.Data.Database
 {
     public class FileClosedEvent
-        : DataStateEvent
+        : FileStateEvent
     {
         public required FileEntity File { get; init; }
     }

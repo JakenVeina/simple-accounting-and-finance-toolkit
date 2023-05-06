@@ -1,23 +1,23 @@
-﻿using Saaft.Data;
+﻿using Saaft.Data.Database;
 
 namespace Saaft.Desktop.Database
 {
     public class ModelFactory
     {
         public ModelFactory(
-            DataStateStore          dataState,
+            FileStateStore          fileState,
             Accounts.ModelFactory   modelFactory)
         {
-            _dataState      = dataState;
+            _fileState      = fileState;
             _modelFactory   = modelFactory;
         }
 
         public FileViewModel CreateFileView()
             => new(
-                dataState:      _dataState,
+                fileState:      _fileState,
                 modelFactory:   _modelFactory);
 
-        private readonly DataStateStore         _dataState;
+        private readonly FileStateStore         _fileState;
         private readonly Accounts.ModelFactory  _modelFactory;
     }
 }

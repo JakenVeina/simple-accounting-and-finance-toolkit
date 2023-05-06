@@ -16,11 +16,11 @@ namespace Saaft.Data.Accounts
         public Repository(
             Data.Auditing.Repository    auditingRepository,
             Database.Repository         databaseRepository,
-            DataStateStore              dataState,
+            FileStateStore              fileState,
             SystemClock                 systemClock)
         {
             _auditingRepository = auditingRepository;
-            _dataState          = dataState;
+            _fileState          = fileState;
             _systemClock        = systemClock;
 
             var allVersions = databaseRepository.LoadedDatabase
@@ -39,10 +39,10 @@ namespace Saaft.Data.Accounts
                     comparer:       SequenceEqualityComparer<ulong>.Default)
                 .ShareReplay(1);
 
-            _nextAccountId = dataState.Events
-                .StartWith(null as DataStateEvent)
+            _nextAccountId = fileState.Events
+                .StartWith(null as FileStateEvent)
                 .WithLatestFrom(
-                    dataState.Select(static dataState => dataState.LoadedFile.Database.AccountVersions),
+                    fileState.Select(static fileState => fileState.LoadedFile.Database.AccountVersions),
                     static (@event, versions) => (@event, versions))
                 .Scan(1UL, static (nextAccountId, @params) => @params.@event switch
                 {
@@ -58,10 +58,10 @@ namespace Saaft.Data.Accounts
                 .DistinctUntilChanged()
                 .ShareReplay(1);
 
-            _nextVersionId = dataState.Events
-                .StartWith(null as DataStateEvent)
+            _nextVersionId = fileState.Events
+                .StartWith(null as FileStateEvent)
                 .WithLatestFrom(
-                    dataState.Select(static dataState => dataState.LoadedFile.Database.AccountVersions),
+                    fileState.Select(static fileState => fileState.LoadedFile.Database.AccountVersions),
                     static (@event, versions) => (@event, versions))
                 .Scan(1UL, static (nextVersionId, @params) => @params.@event switch
                 {
@@ -110,16 +110,16 @@ namespace Saaft.Data.Accounts
                             Type                = model.Type
                         }
                     })
-                .Do(@event => _dataState.Value = _dataState.Value with
+                .Do(@event => _fileState.Value = _fileState.Value with
                 {
                     LatestEvent = @event,
-                    LoadedFile  = _dataState.Value.LoadedFile with
+                    LoadedFile  = _fileState.Value.LoadedFile with
                     {
-                        Database    = _dataState.Value.LoadedFile.Database with
+                        Database    = _fileState.Value.LoadedFile.Database with
                         {
-                            AccountVersions = _dataState.Value.LoadedFile.Database.AccountVersions
+                            AccountVersions = _fileState.Value.LoadedFile.Database.AccountVersions
                                 .Add(@event.Version),
-                            AuditingActions = _dataState.Value.LoadedFile.Database.AuditingActions
+                            AuditingActions = _fileState.Value.LoadedFile.Database.AuditingActions
                                 .Add(@event.Action)
                         },
                         HasChanges  = true
@@ -159,16 +159,16 @@ namespace Saaft.Data.Accounts
                             OldVersion  = currentVersion
                         };
                     })
-                .Do(@event => _dataState.Value = _dataState.Value with
+                .Do(@event => _fileState.Value = _fileState.Value with
                 {
                     LatestEvent = @event,
-                    LoadedFile  = _dataState.Value.LoadedFile with
+                    LoadedFile  = _fileState.Value.LoadedFile with
                     {
-                        Database    = _dataState.Value.LoadedFile.Database with
+                        Database    = _fileState.Value.LoadedFile.Database with
                         {
-                            AccountVersions = _dataState.Value.LoadedFile.Database.AccountVersions
+                            AccountVersions = _fileState.Value.LoadedFile.Database.AccountVersions
                                 .Replace(@event.OldVersion, @event.NewVersion),
-                            AuditingActions = _dataState.Value.LoadedFile.Database.AuditingActions
+                            AuditingActions = _fileState.Value.LoadedFile.Database.AuditingActions
                                 .Add(@event.Action)
                         },
                         HasChanges  = true
@@ -179,8 +179,8 @@ namespace Saaft.Data.Accounts
                 Func<VersionEntity, bool>                                           filterPredicate,
                 Func<IEnumerable<VersionEntity>, IOrderedEnumerable<VersionEntity>> orderByClause,
                 Func<VersionEntity, T>                                              selector)
-            => _dataState.Events
-                .StartWith(null as DataStateEvent)
+            => _fileState.Events
+                .StartWith(null as FileStateEvent)
                 .WithLatestFrom(
                     Observable.Zip(
                         CurrentVersions.StartWith(ImmutableList<VersionEntity>.Empty),
@@ -240,7 +240,7 @@ namespace Saaft.Data.Accounts
 
         private readonly Data.Auditing.Repository                   _auditingRepository;
         private readonly IObservable<IReadOnlyList<VersionEntity>>  _currentVersions;
-        private readonly DataStateStore                             _dataState;
+        private readonly FileStateStore                             _fileState;
         private readonly IObservable<ulong>                         _nextAccountId;
         private readonly IObservable<ulong>                         _nextVersionId;
         private readonly SystemClock                                _systemClock;

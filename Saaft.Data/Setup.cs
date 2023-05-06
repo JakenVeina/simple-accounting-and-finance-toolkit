@@ -12,7 +12,6 @@ namespace Saaft.Data
             => services
                 .AddAccounts()
                 .AddAuditing()
-                .AddDatabase()
-                .AddSingleton<DataStateStore>();
+                .AddDatabase();
     }
 }

@@ -3,8 +3,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
-
-using Saaft.Data;
 using Saaft.Data.Database;
 
 namespace Saaft.Desktop.Database
@@ -12,17 +10,17 @@ namespace Saaft.Desktop.Database
     public class FileViewModel
     {
         public FileViewModel(
-            DataStateStore          dataState,
+            FileStateStore          fileState,
             Accounts.ModelFactory   modelFactory)
         {
             _accountsList = modelFactory.CreateListView();
 
-            _name = dataState
-                .Select(static dataState => string.Concat(
-                    (dataState.LoadedFile.FilePath is null)
+            _name = fileState
+                .Select(static fileState => string.Concat(
+                    (fileState.LoadedFile.FilePath is null)
                         ? FileEntity.DefaultFilename
-                        : Path.GetFileName(dataState.LoadedFile.FilePath),
-                    dataState.LoadedFile.HasChanges
+                        : Path.GetFileName(fileState.LoadedFile.FilePath),
+                    fileState.LoadedFile.HasChanges
                         ? "*"
                         : ""))
                 .DistinctUntilChanged()
