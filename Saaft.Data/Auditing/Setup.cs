@@ -2,7 +2,7 @@
 
 namespace Saaft.Data.Auditing
 {
-    public static class Setup
+    internal static class Setup
     {
         public static IServiceCollection AddAuditing(this IServiceCollection services)
             => services.AddSingleton<Repository>();

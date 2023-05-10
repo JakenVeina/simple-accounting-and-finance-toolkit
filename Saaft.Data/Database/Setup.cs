@@ -2,7 +2,7 @@
 
 namespace Saaft.Data.Database
 {
-    public static class Setup
+    internal static class Setup
     {
         public static IServiceCollection AddDatabase(this IServiceCollection services)
             => services
