@@ -11,7 +11,6 @@
                 <ResourceDictionary Source="Accounts/Resources.xaml"/>
                 <ResourceDictionary Source="Database/Resources.xaml"/>
                 <ResourceDictionary Source="Validation/Resources.xaml"/>
-                <ResourceDictionary Source="Workspaces/Resources.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

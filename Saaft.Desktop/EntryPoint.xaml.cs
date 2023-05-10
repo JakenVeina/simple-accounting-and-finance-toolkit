@@ -22,10 +22,10 @@ namespace Saaft.Desktop
                     ValidateScopes  = true
                 });
 
-            _hostWindow = new Workspaces.Window()
+            _hostWindow = new HostWindow()
             {
-                DataContext = _serviceProvider.GetRequiredService<Workspaces.ModelFactory>()
-                    .CreateMain()
+                DataContext = _serviceProvider.GetRequiredService<Database.ModelFactory>()
+                    .CreateFileWorkspace()
             };
             _hostWindow.Show();
 
@@ -49,7 +49,7 @@ namespace Saaft.Desktop
             base.OnExit(e);
         }
 
+        private HostWindow?         _hostWindow;
         private ServiceProvider?    _serviceProvider;
-        private Workspaces.Window?  _hostWindow;
     }
 }

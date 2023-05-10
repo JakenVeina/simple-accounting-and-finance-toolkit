@@ -2,7 +2,6 @@
 
 using Saaft.Desktop.Accounts;
 using Saaft.Desktop.Database;
-using Saaft.Desktop.Workspaces;
 
 namespace Saaft.Desktop
 {
@@ -11,7 +10,6 @@ namespace Saaft.Desktop
         public static IServiceCollection AddSaaftDesktop(this IServiceCollection services)
             => services
                 .AddAccounts()
-                .AddDatabase()
-                .AddWorkspaces();
+                .AddDatabase();
     }
 }

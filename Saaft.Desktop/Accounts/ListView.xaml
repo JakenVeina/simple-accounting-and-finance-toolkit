@@ -5,9 +5,9 @@
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:Saaft="clr-namespace:Saaft.Desktop"
         xmlns:Accounts="clr-namespace:Saaft.Desktop.Accounts"
         xmlns:Interactions="clr-namespace:Saaft.Desktop.Interactions"
-        xmlns:Workspaces="clr-namespace:Saaft.Desktop.Workspaces"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=Accounts:ListViewModel}">
 
@@ -30,9 +30,9 @@
                             Command="{Binding Value.AdoptAccountIdCommand}"/>
                     </b:Interaction.Behaviors>
                     <b:Interaction.Triggers>
-                        <Interactions:ReactiveTrigger Source="{Binding Value.WorkspaceLaunchRequested}">
+                        <Interactions:ReactiveTrigger Source="{Binding Value.HostRequested}">
                             <b:InvokeCommandAction
-                                Command="{x:Static Workspaces:Commands.Launch}"
+                                Command="{x:Static Saaft:Commands.Host}"
                                 PassEventArgsToCommand="True"/>
                         </Interactions:ReactiveTrigger>
                     </b:Interaction.Triggers>

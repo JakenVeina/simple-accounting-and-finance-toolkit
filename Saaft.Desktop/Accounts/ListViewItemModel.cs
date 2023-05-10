@@ -24,9 +24,9 @@ namespace Saaft.Desktop.Accounts
             _accountId                      = accountId;
             _adoptAccountIdCommandExecuted  = new();
             _createChildCommandExecuted     = new();
+            _hostRequested                  = new();
             _isAccount                      = true;
             _subscriptions                  = new();
-            _workspaceLaunchRequested       = new();
 
             var currentVersion = repository.CurrentVersions
                 .Select(versions => versions.SingleOrDefault(version => version.AccountId == accountId))
@@ -88,7 +88,7 @@ namespace Saaft.Desktop.Accounts
 
             _createChildCommandExecuted
                 .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
-                .Subscribe(currentVersion => _workspaceLaunchRequested.OnNext(() => modelFactory
+                .Subscribe(currentVersion => _hostRequested.OnNext(modelFactory
                     .CreateFormWorkspace(new CreationModel()
                     {
                         Name            = $"New {currentVersion.Type} Account",
@@ -102,7 +102,7 @@ namespace Saaft.Desktop.Accounts
             _editCommandExecuted = new();
             _editCommandExecuted 
                 .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
-                .Subscribe(currentVersion => _workspaceLaunchRequested.OnNext(() => modelFactory
+                .Subscribe(currentVersion => _hostRequested.OnNext(modelFactory
                     .CreateFormWorkspace(new MutationModel()
                     {
                         AccountId       = currentVersion.AccountId,
@@ -127,9 +127,9 @@ namespace Saaft.Desktop.Accounts
             Data.Accounts.Type  type)
         {
             _adoptAccountIdCommandExecuted  = new();
+            _hostRequested                  = new();
             _isAccount                      = false;
             _subscriptions                  = new();
-            _workspaceLaunchRequested       = new();
 
             _adoptAccountIdCommand = ReactiveCommand.Create(
                 onExecuted: _adoptAccountIdCommandExecuted);
@@ -158,7 +158,7 @@ namespace Saaft.Desktop.Accounts
                         .ToReactiveReadOnlyProperty())
                 .ToReactiveCollection();
 
-            _createChildCommand = ReactiveCommand.Create(() => _workspaceLaunchRequested.OnNext(() => modelFactory
+            _createChildCommand = ReactiveCommand.Create(() => _hostRequested.OnNext(modelFactory
                 .CreateFormWorkspace(new CreationModel()
                 {
                     Name    = $"New {type} Account",
@@ -185,32 +185,28 @@ namespace Saaft.Desktop.Accounts
         public ReactiveCommand EditCommand
             => _editCommand;
 
+        public IObservable<HostedModelBase> HostRequested
+            => _hostRequested;
+
         public bool IsAccount
             => _isAccount;
 
         public ReactiveReadOnlyProperty<string> Name
             => _name;
 
-        public IObservable<Func<Workspaces.ModelBase>> WorkspaceLaunchRequested
-            => _workspaceLaunchRequested;
-
         public void Dispose()
         {
-            _adoptAccountIdCommandExecuted.OnCompleted();
-            _adoptAccountIdCommandExecuted.Dispose();
-            if (_createChildCommandExecuted is not null)
-            {
-                _createChildCommandExecuted.OnCompleted();
-                _createChildCommandExecuted.Dispose();
-            }
-            if (_editCommandExecuted is not null)
-            {
-                _editCommandExecuted.OnCompleted();
-                _editCommandExecuted.Dispose();
-            }
             _subscriptions.Dispose();
-            _workspaceLaunchRequested.OnCompleted();
-            _workspaceLaunchRequested.Dispose();
+
+            _adoptAccountIdCommandExecuted.OnCompleted();
+            _createChildCommandExecuted?.OnCompleted();
+            _editCommandExecuted?.OnCompleted();
+            _hostRequested.OnCompleted();
+
+            _adoptAccountIdCommandExecuted.Dispose();
+            _createChildCommandExecuted?.Dispose();
+            _editCommandExecuted?.Dispose();
+            _hostRequested.Dispose();
         }
 
         private readonly ulong?                                                             _accountId;
@@ -221,9 +217,9 @@ namespace Saaft.Desktop.Accounts
         private readonly Subject<Unit>?                                                     _createChildCommandExecuted;
         private readonly ReactiveCommand                                                    _editCommand;
         private readonly Subject<Unit>?                                                     _editCommandExecuted;
+        private readonly Subject<HostedModelBase>                                           _hostRequested;
         private readonly bool                                                               _isAccount;
         private readonly ReactiveReadOnlyProperty<string>                                   _name;
         private readonly CompositeDisposable                                                _subscriptions;
-        private readonly Subject<Func<Workspaces.ModelBase>>                                _workspaceLaunchRequested;
     }
 }

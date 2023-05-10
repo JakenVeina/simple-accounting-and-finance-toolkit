@@ -1,19 +1,20 @@
 ﻿<UserControl
-        x:Class="Saaft.Desktop.Workspaces.MainWorkspace"
+        x:Class="Saaft.Desktop.Database.FileWorkspace"
         xmlns="http://schemas.microsoft.com/netfx/2009/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:Saaft="clr-namespace:Saaft.Desktop"
         xmlns:Interactions="clr-namespace:Saaft.Desktop.Interactions"
-        xmlns:Workspaces="clr-namespace:Saaft.Desktop.Workspaces"
+        xmlns:Database="clr-namespace:Saaft.Desktop.Database"
         mc:Ignorable="d"
-        d:DataContext="{d:DesignInstance Type=Workspaces:MainWorkspaceModel}">
+        d:DataContext="{d:DesignInstance Type=Database:FileWorkspaceModel}">
     
     <b:Interaction.Triggers>
-        <Interactions:ReactiveTrigger Source="{Binding PromptRequested, Mode=OneTime}">
+        <Interactions:ReactiveTrigger Source="{Binding HostRequested, Mode=OneTime}">
             <b:InvokeCommandAction
-                Command="{x:Static Workspaces:Commands.Prompt}"
+                Command="{x:Static Saaft:Commands.Host}"
                 PassEventArgsToCommand="True"/>
         </Interactions:ReactiveTrigger>
     </b:Interaction.Triggers>

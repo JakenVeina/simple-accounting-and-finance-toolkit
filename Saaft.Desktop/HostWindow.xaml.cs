@@ -1,14 +1,15 @@
-﻿using System;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
 
 using Microsoft.Win32;
 
-namespace Saaft.Desktop.Workspaces
+using Saaft.Desktop.Prompts;
+
+namespace Saaft.Desktop
 {
-    public partial class Window
+    public partial class HostWindow
     {
-        public Window()
+        public HostWindow()
             => InitializeComponent();
 
         private void OnCloseCanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -17,42 +18,17 @@ namespace Saaft.Desktop.Workspaces
         private void OnCloseExecuted(object sender, ExecutedRoutedEventArgs e)
             => Close();
 
-        private void OnLaunchCanExecute(object sender, CanExecuteRoutedEventArgs e)
-            => e.CanExecute = true;
+        private void OnHostCanExecute(object sender, CanExecuteRoutedEventArgs e)
+            => e.CanExecute = e.Parameter is null or HostedModelBase;
 
-        private void OnLaunchExecuted(object sender, ExecutedRoutedEventArgs e)
-        {
-            if (e.Parameter is not Func<ModelBase> workspaceFactory)
-                return;
-
-            var workspace = workspaceFactory.Invoke();
-            try
-            {
-                new Window()
-                    {
-                        DataContext     = workspace,
-                        SizeToContent   = SizeToContent.WidthAndHeight
-                    }
-                    .ShowDialog();
-            }
-            finally
-            {
-                if (workspace is IDisposable disposable)
-                    disposable.Dispose();
-            }
-        }
-
-        private void OnPromptCanExecute(object sender, CanExecuteRoutedEventArgs e)
-            => e.CanExecute = true;
-
-        private void OnPromptExecuted(object sender, ExecutedRoutedEventArgs e)
+        private void OnHostExecuted(object sender, ExecutedRoutedEventArgs e)
         {
             if (e.Parameter is DecisionPromptModel decisionPrompt)
             {
                 var result = MessageBox.Show(
                     owner:          this,
                     messageBoxText: decisionPrompt.Message,
-                    caption:        decisionPrompt.Title,
+                    caption:        decisionPrompt.Title.Value,
                     button:         MessageBoxButton.YesNoCancel,
                     icon:           MessageBoxImage.Warning);
 
@@ -78,7 +54,8 @@ namespace Saaft.Desktop.Workspaces
                     CheckFileExists = true,
                     CheckPathExists = true,
                     FileName        = openFilePrompt.InitialFilePath,
-                    Filter          = openFilePrompt.Filter
+                    Filter          = openFilePrompt.Filter,
+                    Title           = openFilePrompt.Title.Value
                 };
 
                 if (dialog.ShowDialog() != true)
@@ -92,13 +69,31 @@ namespace Saaft.Desktop.Workspaces
                 {
                     CheckPathExists = true,
                     FileName        = saveFilePrompt.InitialFilePath,
-                    Filter          = saveFilePrompt.Filter
+                    Filter          = saveFilePrompt.Filter,
+                    Title           = saveFilePrompt.Title.Value
                 };
 
                 if (dialog.ShowDialog() != true)
                     saveFilePrompt.Cancel();
 
                 saveFilePrompt.SetResult(dialog.FileName!);
+            }
+            else if (e.Parameter is HostedModelBase hostedModel)
+            {
+                try
+                {
+                    new HostWindow()
+                        {
+                            DataContext     = hostedModel,
+                            SizeToContent   = SizeToContent.WidthAndHeight
+                        }
+                        .ShowDialog();
+                }
+                finally
+                {
+                    if (hostedModel is not ModelBase)
+                        hostedModel.Dispose();
+                }
             }
         }
     }

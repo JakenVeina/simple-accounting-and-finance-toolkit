@@ -1,11 +1,11 @@
-﻿<Window x:Class="Saaft.Desktop.Workspaces.Window"
+﻿<Window x:Class="Saaft.Desktop.HostWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:Workspaces="clr-namespace:Saaft.Desktop.Workspaces"
+        xmlns:Saaft="clr-namespace:Saaft.Desktop"
         mc:Ignorable="d"
-        d:DataContext="{d:DesignInstance Type=Workspaces:ModelBase}"
+        d:DataContext="{d:DesignInstance Type=Saaft:HostedModelBase}"
         Title="{Binding Title.Value}">
 
     <Window.CommandBindings>
@@ -14,13 +14,9 @@
             Executed="OnCloseExecuted"
             CanExecute="OnCloseCanExecute" />
         <CommandBinding
-            Command="{x:Static Workspaces:Commands.Launch}"
-            Executed="OnLaunchExecuted"
-            CanExecute="OnLaunchCanExecute"/>
-        <CommandBinding
-            Command="{x:Static Workspaces:Commands.Prompt}"
-            Executed="OnPromptExecuted"
-            CanExecute="OnPromptCanExecute"/>
+            Command="{x:Static Saaft:Commands.Host}"
+            Executed="OnHostExecuted"
+            CanExecute="OnHostCanExecute"/>
     </Window.CommandBindings>
     
     <ContentControl Content="{Binding}"/>

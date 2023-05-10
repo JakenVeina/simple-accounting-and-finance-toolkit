@@ -1,8 +1,0 @@
-﻿<ResourceDictionary
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:Workspaces="clr-namespace:Saaft.Desktop.Workspaces">
-
-    <DataTemplate DataType="{x:Type Workspaces:MainWorkspaceModel}"><Workspaces:MainWorkspace/></DataTemplate>
-
-</ResourceDictionary>

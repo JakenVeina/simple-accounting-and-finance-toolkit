@@ -12,8 +12,7 @@ using Saaft.Desktop.Validation;
 namespace Saaft.Desktop.Accounts
 {
     public sealed class FormWorkspaceModel
-        : Workspaces.ModelBase,
-            IDisposable
+        : HostedModelBase
     {
         public FormWorkspaceModel(
             Repository      repository,
@@ -164,14 +163,18 @@ namespace Saaft.Desktop.Accounts
         public Data.Accounts.Type Type
             => _type;
 
-        public void Dispose()
+        protected override void OnDisposing(DisposalType type)
         {
-            _descriptionSource.OnCompleted();
-            _descriptionSource.Dispose();
-            _nameSource.OnCompleted();
-            _nameSource.Dispose();
-            _saveCommandExecuted.OnCompleted();
-            _saveCommandExecuted.Dispose();
+            if (type is DisposalType.Managed)
+            {
+                _descriptionSource.OnCompleted();
+                _nameSource.OnCompleted();
+                _saveCommandExecuted.OnCompleted();
+
+                _descriptionSource.Dispose();
+                _nameSource.Dispose();
+                _saveCommandExecuted.Dispose();
+            }
         }
 
         private readonly ReactiveProperty<string?>          _description;
