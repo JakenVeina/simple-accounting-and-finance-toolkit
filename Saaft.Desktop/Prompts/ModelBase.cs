@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -13,6 +12,7 @@ namespace Saaft.Desktop.Prompts
         protected ModelBase()
         {
             _cancelCommandExecuted = new();
+            
             _cancelCommand = ReactiveCommand.Create(_cancelCommandExecuted);
         }
 
@@ -24,6 +24,7 @@ namespace Saaft.Desktop.Prompts
         protected override void OnDisposing(DisposalType type)
         {
             _cancelCommandExecuted.OnCompleted();
+
             _cancelCommandExecuted.Dispose();
         }
 

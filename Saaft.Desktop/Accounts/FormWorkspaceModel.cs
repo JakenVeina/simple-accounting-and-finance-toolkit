@@ -57,7 +57,7 @@ namespace Saaft.Desktop.Accounts
                 .ToReactiveReadOnlyProperty();
 
             _saveCommand = ReactiveCommand.Create(
-                onExecuted: _saveCommandExecuted,
+                onExecuted: () => _saveCommandExecuted.OnNext(Unit.Default),
                 canExecute: nameErrors
                     .Select(errors => errors.Length is 0));
 
@@ -72,7 +72,7 @@ namespace Saaft.Desktop.Accounts
                     Name        = @params.name
                 })
                 .ApplyOperation(repository.Create)
-                .Select(_ => Unit.Default)
+                .SelectUnit()
                 .Share();
         }
 
@@ -138,7 +138,7 @@ namespace Saaft.Desktop.Accounts
                     Name        = @params.name
                 })
                 .ApplyOperation(repository.Mutate)
-                .Select(static _ => Unit.Default)
+                .SelectUnit()
                 .Share();
         }
 

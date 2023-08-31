@@ -1,5 +1,7 @@
-﻿using System.Reactive;
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
+using System.Reactive;
+using System.Reactive.Disposables;
+using System.Reactive.Subjects;
 
 namespace System.Windows.Input
 {
@@ -9,12 +11,16 @@ namespace System.Windows.Input
         static ReactiveCommand()
         {
             _canAlwaysExecutePredicate  = static _ => true;
-            _canAlwaysExecute           = Observable.Return(_canAlwaysExecutePredicate);
+            _canAlwaysExecute           = Observable
+                .Never<Predicate<object?>>()
+                .Prepend(_canAlwaysExecutePredicate);
             _canNeverExecutePredicate   = static _ => false;
+            _doNothingAction            = static _ => { };
+            _doNothingOnExecuted        = Observer.Create(_doNothingAction);
 
             NotSupported = new(
                 canExecute: Observable.Return(_canNeverExecutePredicate),
-                onExecuted: Observer.Create<object?>(static _ => { }));
+                executeOperation: static onExecuteRequested => onExecuteRequested.SelectUnit());
         }
 
         public static readonly ReactiveCommand NotSupported;
@@ -24,11 +30,21 @@ namespace System.Windows.Input
                 canExecute: _canAlwaysExecute,
                 onExecuted: Observer.Create<object?>(_ => onExecuted.Invoke()));
 
+        public static ReactiveCommand Create(
+                Action              onExecuted,
+                IObservable<bool>   canExecute)
+            => new(
+                canExecute:         canExecute
+                    .Select(static canExecute => canExecute
+                        ? _canAlwaysExecutePredicate
+                        : _canNeverExecutePredicate),
+                onExecuted: Observer.Create<object?>(_ => onExecuted.Invoke()));
+
         public static ReactiveCommand Create(IObserver<Unit> onExecuted)
             => new(
                 canExecute: _canAlwaysExecute,
-                onExecuted: Observer.Create<object?>(_ => onExecuted.OnNext(default)));
-    
+                onExecuted: Observer.Create<object?>(_ => onExecuted.OnNext(Unit.Default)));
+
         public static ReactiveCommand Create(
                 IObserver<Unit>     onExecuted,
                 IObservable<bool>   canExecute)
@@ -37,52 +53,111 @@ namespace System.Windows.Input
                     .Select(static canExecute => canExecute
                         ? _canAlwaysExecutePredicate
                         : _canNeverExecutePredicate),
-                onExecuted: Observer.Create<object?>(_ => onExecuted.OnNext(default)));
+                onExecuted: Observer.Create<object?>(_ => onExecuted.OnNext(Unit.Default)));
 
-        public static ReactiveCommand Create<T>(IObserver<T> onExecuted)
+        public static ReactiveCommand Create(Func<IObservable<Unit>, IObservable<Unit>> executeOperation)
             => new(
-                canExecute: Observable.Return(new Predicate<object?>(static parameter => parameter switch
-                {
-                    null    => true,
-                    T value => true,
-                    _       => false
-                })),
-                onExecuted: Observer.Create<object?>(parameter => 
-                {
-                    if (parameter is T value)
-                        onExecuted.OnNext(value);
-                }));
+                canExecute:         _canAlwaysExecute,
+                executeOperation:   onExecuteRequested => onExecuteRequested
+                    .SelectUnit()
+                    .ApplyOperation(executeOperation));
 
-        public static ReactiveCommand Create<T>(
-                    IObserver<T>                onExecuted,
-                    IObservable<Predicate<T?>>  canExecute)
+        public static ReactiveCommand Create(
+                Func<IObservable<Unit>, IObservable<Unit>>  executeOperation,
+                IObservable<bool>                           canExecute)
+            => new(
+                canExecute:         canExecute
+                    .Select(static canExecute => canExecute
+                        ? _canAlwaysExecutePredicate
+                        : _canNeverExecutePredicate),
+                executeOperation:   onExecuteRequested => onExecuteRequested
+                    .SelectUnit()
+                    .ApplyOperation(executeOperation));
+
+        public static ReactiveCommand Create<T>(Func<IObservable<T>, IObservable<Unit>> executeOperation)
                 where T : struct
             => new(
-                canExecute: canExecute
-                    .Select(static canExecutePredicate => new Predicate<object?>(parameter => parameter switch
-                    {
-                        null    => canExecutePredicate.Invoke(default),
-                        T value => canExecutePredicate.Invoke(value),
-                        _       => false
-                    })),
-                onExecuted: Observer.Create<object?>(parameter => 
-                {
-                    if (parameter is T value)
-                        onExecuted.OnNext(value);
-                }));
+                canExecute:         _canAlwaysExecute,
+                executeOperation:   onExecuteRequested => onExecuteRequested
+                    .Where(static parameter => parameter is not null and T)
+                    .Select(static parameter => (T)parameter!)
+                    .ApplyOperation(executeOperation));
+
+        public static ReactiveCommand Create<T>(
+                    Func<IObservable<T>, IObservable<Unit>> executeOperation,
+                    IObservable<Predicate<T?>>              canExecute)
+                where T : struct
+            => new(
+                canExecute:         canExecute
+                    .Select(static canExecute => new Predicate<object?>(
+                        parameter => parameter switch
+                        {
+                            null    => canExecute.Invoke(null),
+                            T value => canExecute.Invoke(value),
+                            _       => false
+                        })),
+                executeOperation:   onExecuteRequested => onExecuteRequested
+                    .Where(static parameter => parameter is not null and T)
+                    .Select(static parameter => (T)parameter!)
+                    .ApplyOperation(executeOperation));
 
         private ReactiveCommand(
             IObservable<Predicate<object?>> canExecute,
             IObserver<object?>              onExecuted)
         {
-            _canExecute = _canNeverExecutePredicate;
-            _onExecuted = onExecuted;
-
-            var eventPattern = new EventPattern<object?, EventArgs>(this, EventArgs.Empty);
+            _canExecutePredicate    = _canNeverExecutePredicate;
+            _onExecuted             = _doNothingOnExecuted;
 
             _canExecuteChanged = canExecute
-                .Do(canExecute => _canExecute = canExecute)
-                .Select(static _ => Unit.Default)
+                .Do(canExecute => 
+                {
+                    _canExecutePredicate    = canExecute;
+                    _onExecuted             = onExecuted;
+                })
+                .Finally(() => 
+                {
+                    _canExecutePredicate    = _canNeverExecutePredicate;
+                    _onExecuted             = _doNothingOnExecuted;
+                })
+                .SelectUnit()
+                .Share()
+                .ToEventPattern(sender: this);
+        }
+
+        private ReactiveCommand(
+            IObservable<Predicate<object?>>                 canExecute,
+            Func<IObservable<object?>, IObservable<Unit>>   executeOperation)
+        {
+            _canExecutePredicate    = _canNeverExecutePredicate;
+            _onExecuted             = _doNothingOnExecuted;
+
+            _canExecuteChanged = Observable.Create<Unit>(observer =>
+                {
+                    var onExecuted = new Subject<object?>();
+                    _onExecuted = onExecuted;
+
+                    return new CompositeDisposable()
+                    {
+                        Disposable.Create(() =>
+                        {
+                            onExecuted.OnCompleted();
+
+                            _canExecutePredicate    = _canNeverExecutePredicate;
+                            _onExecuted             = _doNothingOnExecuted;
+
+                            onExecuted.Dispose();
+                        }),
+
+                        onExecuted
+                            .ApplyOperation(executeOperation)
+                            .Subscribe(),
+
+                        canExecute
+                            .Do(canExecute => _canExecutePredicate = canExecute)
+                            .SelectUnit()
+                            .Subscribe(observer)
+                    };
+                })
                 .Share()
                 .ToEventPattern(sender: this);
         }
@@ -94,18 +169,20 @@ namespace System.Windows.Input
         }
 
         bool ICommand.CanExecute(object? parameter)
-            => _canExecute.Invoke(parameter);
+            => _canExecutePredicate.Invoke(parameter);
 
         void ICommand.Execute(object? parameter)
             => _onExecuted.OnNext(parameter);
 
-        private readonly IBasicEventSource    _canExecuteChanged;
-        private readonly IObserver<object?>     _onExecuted;
+        private readonly IBasicEventSource _canExecuteChanged;
 
-        private Predicate<object?> _canExecute;
+        private Predicate<object?>  _canExecutePredicate;
+        private IObserver<object?>  _onExecuted;
 
         private static readonly IObservable<Predicate<object?>> _canAlwaysExecute;
         private static readonly Predicate<object?>              _canAlwaysExecutePredicate;
         private static readonly Predicate<object?>              _canNeverExecutePredicate;
+        private static readonly Action<object?>                 _doNothingAction;
+        private static readonly IObserver<object?>              _doNothingOnExecuted;
     }
 }

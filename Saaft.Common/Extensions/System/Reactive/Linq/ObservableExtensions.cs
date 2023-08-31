@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using System.Reactive.Subjects;
+﻿using System.Reactive.Subjects;
 
 namespace System.Reactive.Linq
 {
@@ -9,6 +8,9 @@ namespace System.Reactive.Linq
                 this    IObservable<TIn>                            source,
                         Func<IObservable<TIn>, IObservable<TOut>>   operation)
             => operation.Invoke(source);
+
+        public static IObservable<Unit> SelectUnit<T>(this IObservable<T> source)
+            => source.Select(static _ => Unit.Default);
 
         public static IObservable<T> Share<T>(this IObservable<T> source)
             => source

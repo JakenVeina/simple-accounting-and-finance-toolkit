@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Reactive;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows.Input;
@@ -21,12 +19,9 @@ namespace Saaft.Desktop.Accounts
             Repository      repository,
             ulong           accountId)
         {
-            _accountId                      = accountId;
-            _adoptAccountIdCommandExecuted  = new();
-            _createChildCommandExecuted     = new();
-            _hostRequested                  = new();
-            _isAccount                      = true;
-            _subscriptions                  = new();
+            _accountId      = accountId;
+            _hostRequested  = new();
+            _isAccount      = true;
 
             var currentVersion = repository.CurrentVersions
                 .Select(versions => versions.SingleOrDefault(version => version.AccountId == accountId))
@@ -35,8 +30,20 @@ namespace Saaft.Desktop.Accounts
                 .ShareReplay(1);
 
             _adoptAccountIdCommand = ReactiveCommand.Create(
-                onExecuted: _adoptAccountIdCommandExecuted,
-                canExecute: Observable.CombineLatest(currentVersion, repository.CurrentVersions, static (currentVersion, currentVersions) => (currentVersion, currentVersions))
+                executeOperation:   onExecuteRequested => onExecuteRequested
+                    .WithLatestFrom(repository.CurrentVersions, static (targetAccountId, currentVersions) => currentVersions
+                        .First(version => version.AccountId == targetAccountId))
+                    .WithLatestFrom(currentVersion, static (targetVersion, currentVersion) => new MutationModel()
+                    {
+                        AccountId       = targetVersion.AccountId,
+                        Description     = targetVersion.Description,
+                        Name            = targetVersion.Name,
+                        ParentAccountId = currentVersion.AccountId,
+                        Type            = currentVersion.Type
+                    })
+                    .ApplyOperation(repository.Mutate)
+                    .SelectUnit(),
+                canExecute:         Observable.CombineLatest(currentVersion, repository.CurrentVersions, static (currentVersion, currentVersions) => (currentVersion, currentVersions))
                     .Select(static @params =>
                     {
                         var invalidNewChildAccountIds = new HashSet<ulong>(@params.currentVersions.Count)
@@ -63,21 +70,6 @@ namespace Saaft.Desktop.Accounts
                             || !invalidNewChildAccountIds.Contains(newChildAccountId.Value));
                     }));
 
-            _adoptAccountIdCommandExecuted
-                .WithLatestFrom(repository.CurrentVersions, static (targetAccountId, currentVersions) => currentVersions
-                    .First(version => version.AccountId == targetAccountId))
-                .WithLatestFrom(currentVersion, static (targetVersion, currentVersion) => new MutationModel()
-                {
-                    AccountId       = targetVersion.AccountId,
-                    Description     = targetVersion.Description,
-                    Name            = targetVersion.Name,
-                    ParentAccountId = currentVersion.AccountId,
-                    Type            = currentVersion.Type
-                })
-                .ApplyOperation(repository.Mutate)
-                .Subscribe()
-                .DisposeWith(_subscriptions);
-
             _children = repository.ObserveCurrentVersions(
                     filterPredicate:    version => version.ParentAccountId == accountId,
                     orderByClause:      static versions => versions.OrderBy(static version => version.Name),
@@ -86,34 +78,31 @@ namespace Saaft.Desktop.Accounts
                         .ToReactiveReadOnlyProperty())
                 .ToReactiveCollection();
 
-            _createChildCommandExecuted
-                .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
-                .Subscribe(currentVersion => _hostRequested.OnNext(modelFactory
-                    .CreateFormWorkspace(new CreationModel()
-                    {
-                        Name            = $"New {currentVersion.Type} Account",
-                        ParentAccountId = currentVersion.AccountId,
-                        Type            = currentVersion.Type
-                    })))
-                .DisposeWith(_subscriptions);
+            _createChildCommand = ReactiveCommand.Create(
+                executeOperation: onExecuteRequested => onExecuteRequested
+                    .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
+                    .Do(currentVersion => _hostRequested.OnNext(modelFactory
+                        .CreateFormWorkspace(new CreationModel()
+                        {
+                            Name            = $"New {currentVersion.Type} Account",
+                            ParentAccountId = currentVersion.AccountId,
+                            Type            = currentVersion.Type
+                        })))
+                    .SelectUnit());
 
-            _createChildCommand = ReactiveCommand.Create(_createChildCommandExecuted);
-
-            _editCommandExecuted = new();
-            _editCommandExecuted 
-                .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
-                .Subscribe(currentVersion => _hostRequested.OnNext(modelFactory
-                    .CreateFormWorkspace(new MutationModel()
-                    {
-                        AccountId       = currentVersion.AccountId,
-                        Description     = currentVersion.Description,
-                        Name            = currentVersion.Name,
-                        ParentAccountId = currentVersion.ParentAccountId,
-                        Type            = currentVersion.Type
-                    })))
-                .DisposeWith(_subscriptions);
-
-            _editCommand = ReactiveCommand.Create(_editCommandExecuted);
+            _editCommand = ReactiveCommand.Create(
+                executeOperation: onExecuteRequested => onExecuteRequested
+                    .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
+                    .Do(currentVersion => _hostRequested.OnNext(modelFactory
+                        .CreateFormWorkspace(new MutationModel()
+                        {
+                            AccountId       = currentVersion.AccountId,
+                            Description     = currentVersion.Description,
+                            Name            = currentVersion.Name,
+                            ParentAccountId = currentVersion.ParentAccountId,
+                            Type            = currentVersion.Type
+                        })))
+                    .SelectUnit());
 
             _name = currentVersion
                 .Select(static version => version.Name)
@@ -126,28 +115,23 @@ namespace Saaft.Desktop.Accounts
             Repository          repository,
             Data.Accounts.Type  type)
         {
-            _adoptAccountIdCommandExecuted  = new();
-            _hostRequested                  = new();
-            _isAccount                      = false;
-            _subscriptions                  = new();
+            _hostRequested  = new();
+            _isAccount      = false;
 
-            _adoptAccountIdCommand = ReactiveCommand.Create(
-                onExecuted: _adoptAccountIdCommandExecuted);
-
-            _adoptAccountIdCommandExecuted
-                .WithLatestFrom(repository.CurrentVersions, static (targetAccountId, currentVersions) => currentVersions
-                    .First(version => version.AccountId == targetAccountId))
-                .Select(targetVersion => new MutationModel()
-                {
-                    AccountId       = targetVersion.AccountId,
-                    Description     = targetVersion.Description,
-                    Name            = targetVersion.Name,
-                    ParentAccountId = null,
-                    Type            = type
-                })
-                .ApplyOperation(repository.Mutate)
-                .Subscribe()
-                .DisposeWith(_subscriptions);
+            _adoptAccountIdCommand = ReactiveCommand.Create<ulong>(
+                executeOperation: onExecuteRequested => onExecuteRequested
+                    .WithLatestFrom(repository.CurrentVersions, static (targetAccountId, currentVersions) => currentVersions
+                        .First(version => version.AccountId == targetAccountId))
+                    .Select(targetVersion => new MutationModel()
+                    {
+                        AccountId       = targetVersion.AccountId,
+                        Description     = targetVersion.Description,
+                        Name            = targetVersion.Name,
+                        ParentAccountId = null,
+                        Type            = type
+                    })
+                    .ApplyOperation(repository.Mutate)
+                    .SelectUnit());
 
             _children = repository.ObserveCurrentVersions(
                     filterPredicate:    version => (version.ParentAccountId is null)
@@ -158,8 +142,8 @@ namespace Saaft.Desktop.Accounts
                         .ToReactiveReadOnlyProperty())
                 .ToReactiveCollection();
 
-            _createChildCommand = ReactiveCommand.Create(() => _hostRequested.OnNext(modelFactory
-                .CreateFormWorkspace(new CreationModel()
+            _createChildCommand = ReactiveCommand.Create(() => _hostRequested.OnNext(
+                modelFactory.CreateFormWorkspace(new CreationModel()
                 {
                     Name    = $"New {type} Account",
                     Type    = type
@@ -196,30 +180,18 @@ namespace Saaft.Desktop.Accounts
 
         public void Dispose()
         {
-            _subscriptions.Dispose();
-
-            _adoptAccountIdCommandExecuted.OnCompleted();
-            _createChildCommandExecuted?.OnCompleted();
-            _editCommandExecuted?.OnCompleted();
             _hostRequested.OnCompleted();
 
-            _adoptAccountIdCommandExecuted.Dispose();
-            _createChildCommandExecuted?.Dispose();
-            _editCommandExecuted?.Dispose();
             _hostRequested.Dispose();
         }
 
         private readonly ulong?                                                             _accountId;
         private readonly ReactiveCommand                                                    _adoptAccountIdCommand;
-        private readonly Subject<ulong>                                                     _adoptAccountIdCommandExecuted;
         private readonly ReactiveCollection<ReactiveReadOnlyProperty<ListViewItemModel?>>   _children;
         private readonly ReactiveCommand                                                    _createChildCommand;
-        private readonly Subject<Unit>?                                                     _createChildCommandExecuted;
         private readonly ReactiveCommand                                                    _editCommand;
-        private readonly Subject<Unit>?                                                     _editCommandExecuted;
         private readonly Subject<HostedModelBase>                                           _hostRequested;
         private readonly bool                                                               _isAccount;
         private readonly ReactiveReadOnlyProperty<string>                                   _name;
-        private readonly CompositeDisposable                                                _subscriptions;
     }
 }
