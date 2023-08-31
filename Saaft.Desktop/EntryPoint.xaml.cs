@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Saaft.Common;
 using Saaft.Data;
+using Saaft.Desktop.Database;
 
 namespace Saaft.Desktop
 {
@@ -22,10 +23,12 @@ namespace Saaft.Desktop
                     ValidateScopes  = true
                 });
 
+            _fileWorkspace = _serviceProvider.GetRequiredService<ModelFactory>()
+                .CreateFileWorkspace();
+
             _hostWindow = new HostWindow()
             {
-                DataContext = _serviceProvider.GetRequiredService<Database.ModelFactory>()
-                    .CreateFileWorkspace()
+                DataContext = _fileWorkspace
             };
             _hostWindow.Show();
 
@@ -40,6 +43,12 @@ namespace Saaft.Desktop
                 _hostWindow = null;
             }
 
+            if (_fileWorkspace is not null)
+            {
+                _fileWorkspace.Dispose();
+                _fileWorkspace = null;
+            }
+
             if (_serviceProvider is not null)
             {
                 _serviceProvider.Dispose();
@@ -49,6 +58,7 @@ namespace Saaft.Desktop
             base.OnExit(e);
         }
 
+        private FileWorkspaceModel? _fileWorkspace;
         private HostWindow?         _hostWindow;
         private ServiceProvider?    _serviceProvider;
     }

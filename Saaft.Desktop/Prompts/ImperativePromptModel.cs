@@ -5,7 +5,7 @@ using System.Reactive.Subjects;
 namespace Saaft.Desktop.Prompts
 {
     public class ImperativePromptModel<T>
-        : HostedModelBase
+        : ModelBase<T>
     {
         public ImperativePromptModel(string title)
         {
@@ -14,16 +14,16 @@ namespace Saaft.Desktop.Prompts
             _title = ReactiveReadOnlyProperty.Create(title);
         }
 
-        public IObservable<T> Result
+        public sealed override IObservable<T> Result
             => _result;
 
-        public override ReactiveReadOnlyProperty<string> Title
+        public sealed override ReactiveReadOnlyProperty<string> Title
             => _title;
 
         public void Cancel()
             => _result.OnCompleted();
 
-        public void SetResult(T value)
+        public void PublishResult(T value)
         {
             _result.OnNext(value);
             _result.OnCompleted();
@@ -32,10 +32,15 @@ namespace Saaft.Desktop.Prompts
         protected override void OnDisposing(DisposalType type)
         {
             if (type is DisposalType.Managed)
+                _result.OnCompleted();
+
+            base.OnDisposing(type);
+
+            if (type is DisposalType.Managed)
                 _result.Dispose();
         }
 
-        private readonly ReplaySubject<T>                   _result;
+        private readonly Subject<T>                         _result;
         private readonly ReactiveReadOnlyProperty<string>   _title;
     }
 }

@@ -1,4 +1,8 @@
-﻿using System.Windows;
+﻿using System;
+using System.ComponentModel;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Windows;
 using System.Windows.Input;
 
 using Microsoft.Win32;
@@ -10,16 +14,42 @@ namespace Saaft.Desktop
     public partial class HostWindow
     {
         public HostWindow()
-            => InitializeComponent();
+        {
+            InitializeComponent();
+
+            DataContextChanged += (sender, e) => 
+            {
+                _hostedModelSubscription?.Dispose();
+                _hostedModelSubscription = null;
+
+                if (e.NewValue is IHostedModel hostedModel)
+                    Observable.FromEventPattern<CancelEventHandler, CancelEventArgs>(
+                            addHandler:     handler => Closing += handler,
+                            removeHandler:  handler => Closing -= handler)
+                        .TakeUntil(hostedModel.Closed)
+                        .Do(pattern =>
+                        {
+                            pattern.EventArgs.Cancel = true;
+                            Dispatcher.BeginInvoke(() => hostedModel.OnCloseRequested.OnNext(Unit.Default));
+                        })
+                        .Finally(() => Close())
+                        .Subscribe();
+            };
+        }
 
         private void OnCloseCanExecute(object sender, CanExecuteRoutedEventArgs e)
             => e.CanExecute = true;
 
         private void OnCloseExecuted(object sender, ExecutedRoutedEventArgs e)
-            => Close();
+        {
+            if (DataContext is IHostedModel hostedModel)
+                hostedModel.OnCloseRequested.OnNext(Unit.Default);
+            else
+                Close();
+        }
 
         private void OnHostCanExecute(object sender, CanExecuteRoutedEventArgs e)
-            => e.CanExecute = e.Parameter is null or HostedModelBase;
+            => e.CanExecute = e.Parameter is null or IHostedModel;
 
         private void OnHostExecuted(object sender, ExecutedRoutedEventArgs e)
         {
@@ -35,11 +65,11 @@ namespace Saaft.Desktop
                 switch(result)
                 {
                     case MessageBoxResult.Yes:
-                        decisionPrompt.SetResult(true);
+                        decisionPrompt.PublishResult(true);
                         break;
                     
                     case MessageBoxResult.No:
-                        decisionPrompt.SetResult(false);
+                        decisionPrompt.PublishResult(false);
                         break;
 
                     default:
@@ -61,7 +91,7 @@ namespace Saaft.Desktop
                 if (dialog.ShowDialog() != true)
                     openFilePrompt.Cancel();
 
-                openFilePrompt.SetResult(dialog.FileName!);
+                openFilePrompt.PublishResult(dialog.FileName!);
             }
             else if (e.Parameter is SaveFilePromptModel saveFilePrompt)
             {
@@ -73,28 +103,23 @@ namespace Saaft.Desktop
                     Title           = saveFilePrompt.Title.Value
                 };
 
-                if (dialog.ShowDialog() != true)
+                if ((dialog.ShowDialog() == true) && (dialog.FileName is string fileName))
+                    saveFilePrompt.PublishResult(fileName);
+                else
                     saveFilePrompt.Cancel();
-
-                saveFilePrompt.SetResult(dialog.FileName!);
             }
-            else if (e.Parameter is HostedModelBase hostedModel)
+            else if (e.Parameter is IHostedModel hostedModel)
             {
-                try
+                var host = new HostWindow()
                 {
-                    new HostWindow()
-                        {
-                            DataContext     = hostedModel,
-                            SizeToContent   = SizeToContent.WidthAndHeight
-                        }
-                        .ShowDialog();
-                }
-                finally
-                {
-                    if (hostedModel is not ModelBase)
-                        hostedModel.Dispose();
-                }
+                    DataContext     = hostedModel,
+                    SizeToContent   = SizeToContent.WidthAndHeight
+                };
+
+                host.ShowDialog();
             }
         }
+
+        private IDisposable? _hostedModelSubscription;
     }
 }

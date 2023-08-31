@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
+using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -13,7 +14,7 @@ using Saaft.Desktop.Prompts;
 namespace Saaft.Desktop.Database
 {
     public sealed class FileWorkspaceModel
-        : HostedModelBase,
+        : IHostedModel,
             IDisposable
     {
         public FileWorkspaceModel(
@@ -21,6 +22,7 @@ namespace Saaft.Desktop.Database
             ModelFactory    modelFactory,
             Repository      repository)
         {
+            _closeRequested = new();
             _hostRequested  = new();
             _repository     = repository;
 
@@ -60,8 +62,8 @@ namespace Saaft.Desktop.Database
                             title:              "Open",
                             initialFilePath:    loadedFile.FilePath,
                             filter:             _filePromptFilter))
-                        .Do(prompt => _hostRequested.OnNext(prompt))
-                        .Select(static prompt => prompt.Result)
+                        .Select(prompt => prompt.Result
+                            .OnSubscribed(() => _hostRequested.OnNext(prompt)))
                         .Switch()
                         .Select(static filePath => Observable.FromAsync(async cancellationToken =>
                         {
@@ -95,6 +97,9 @@ namespace Saaft.Desktop.Database
             _title = ReactiveReadOnlyProperty.Create("Simple Accounting and Finance Toolkit");
         }
 
+        public IObservable<Unit> Closed
+            => _closeRequested;
+
         public ReactiveCommand CloseFileCommand
             => _closeFileCommand;
 
@@ -104,22 +109,27 @@ namespace Saaft.Desktop.Database
         public ReactiveCommand NewFileCommand
             => _newFileCommand;
 
+        public IObserver<Unit> OnCloseRequested
+            => _closeRequested;
+
         public ReactiveCommand OpenFileCommand
             => _openFileCommand;
 
-        public IObservable<HostedModelBase> HostRequested
+        public IObservable<IHostedModel> HostRequested
             => _hostRequested;
 
         public ReactiveCommand SaveFileCommand
             => _saveFileCommand;
 
-        public override ReactiveReadOnlyProperty<string> Title
+        public ReactiveReadOnlyProperty<string> Title
             => _title;
 
-        protected override void OnDisposing(DisposalType type)
+        public void Dispose()
         {
+            _closeRequested.OnCompleted();
             _hostRequested.OnCompleted();
 
+            _closeRequested.Dispose();
             _hostRequested.Dispose();
         }
 
@@ -130,8 +140,8 @@ namespace Saaft.Desktop.Database
                         .Create(() => new DecisionPromptModel(
                             title:      "Save changes?",
                             message:    $"The file \"{(loadedFile.FilePath is null ? FileEntity.DefaultFilename : Path.GetFileName(loadedFile.FilePath))}\' has unsaved changes. Would you like to save before continuing?"))
-                        .Do(prompt => _hostRequested.OnNext(prompt))
-                        .Select(static prompt => prompt.Result)
+                        .Select(prompt => prompt.Result
+                            .OnSubscribed(() => _hostRequested.OnNext(prompt)))
                         .Switch()
                         .Select(promptResult => promptResult
                             ? Observable
@@ -151,8 +161,8 @@ namespace Saaft.Desktop.Database
                                 title:              "Save",
                                 initialFilePath:    FileEntity.DefaultFilename,
                                 filter:             _filePromptFilter))
-                            .Do(prompt => _hostRequested.OnNext(prompt))
-                            .Select(static prompt => prompt.Result)
+                            .Select(prompt => prompt.Result
+                                .OnSubscribed(() => _hostRequested.OnNext(prompt)))
                             .Switch()
                             .Select(targetFilePath => (loadedFile, targetFilePath)))
                     .Switch()
@@ -174,8 +184,9 @@ namespace Saaft.Desktop.Database
                 .Switch();
 
         private readonly ReactiveCommand                            _closeFileCommand;
+        private readonly Subject<Unit>                              _closeRequested;
         private readonly ReactiveReadOnlyProperty<FileViewModel?>   _file;
-        private readonly Subject<HostedModelBase>                   _hostRequested;
+        private readonly Subject<IHostedModel>                      _hostRequested;
         private readonly ReactiveCommand                            _newFileCommand;
         private readonly ReactiveCommand                            _openFileCommand;
         private readonly Repository                                 _repository;

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:Saaft="clr-namespace:Saaft.Desktop"
         mc:Ignorable="d"
-        d:DataContext="{d:DesignInstance Type=Saaft:HostedModelBase}"
+        d:DataContext="{d:DesignInstance Type=Saaft:IHostedModel}"
         Title="{Binding Title.Value}">
 
     <Window.CommandBindings>

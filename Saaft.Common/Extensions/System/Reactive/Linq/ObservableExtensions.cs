@@ -9,6 +9,18 @@ namespace System.Reactive.Linq
                         Func<IObservable<TIn>, IObservable<TOut>>   operation)
             => operation.Invoke(source);
 
+        public static IObservable<T> OnSubscribed<T>(
+                this IObservable<T> source,
+                Action              onSubscribed)
+            => Observable.Create<T>(observer =>
+            {
+                var subscription = source.Subscribe(observer);
+
+                onSubscribed.Invoke();
+
+                return subscription;
+            });
+
         public static IObservable<Unit> SelectUnit<T>(this IObservable<T> source)
             => source.Select(static _ => Unit.Default);
 

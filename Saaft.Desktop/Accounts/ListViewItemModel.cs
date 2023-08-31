@@ -81,27 +81,35 @@ namespace Saaft.Desktop.Accounts
             _createChildCommand = ReactiveCommand.Create(
                 executeOperation: onExecuteRequested => onExecuteRequested
                     .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
-                    .Do(currentVersion => _hostRequested.OnNext(modelFactory
-                        .CreateFormWorkspace(new CreationModel()
+                    .Select(currentVersion => ReactiveDisposable
+                        .Create(() => modelFactory.CreateFormWorkspace(new CreationModel()
                         {
                             Name            = $"New {currentVersion.Type} Account",
                             ParentAccountId = currentVersion.AccountId,
                             Type            = currentVersion.Type
-                        })))
+                        }))
+                        .Select(formWorkspace => formWorkspace.Closed
+                            .OnSubscribed(() => _hostRequested.OnNext(formWorkspace)))
+                        .Switch())
+                    .Switch()
                     .SelectUnit());
 
             _editCommand = ReactiveCommand.Create(
                 executeOperation: onExecuteRequested => onExecuteRequested
                     .WithLatestFrom(currentVersion, static (_, currentVersion) => currentVersion)
-                    .Do(currentVersion => _hostRequested.OnNext(modelFactory
-                        .CreateFormWorkspace(new MutationModel()
+                    .Select(currentVersion => ReactiveDisposable
+                        .Create(() => modelFactory.CreateFormWorkspace(new MutationModel()
                         {
                             AccountId       = currentVersion.AccountId,
                             Description     = currentVersion.Description,
                             Name            = currentVersion.Name,
                             ParentAccountId = currentVersion.ParentAccountId,
                             Type            = currentVersion.Type
-                        })))
+                        }))
+                        .Select(formWorkspace => formWorkspace.Closed
+                            .OnSubscribed(() => _hostRequested.OnNext(formWorkspace)))
+                        .Switch())
+                    .Switch()
                     .SelectUnit());
 
             _name = currentVersion
@@ -142,12 +150,19 @@ namespace Saaft.Desktop.Accounts
                         .ToReactiveReadOnlyProperty())
                 .ToReactiveCollection();
 
-            _createChildCommand = ReactiveCommand.Create(() => _hostRequested.OnNext(
-                modelFactory.CreateFormWorkspace(new CreationModel()
-                {
-                    Name    = $"New {type} Account",
-                    Type    = type
-                })));
+            _createChildCommand = ReactiveCommand.Create(
+                executeOperation: onExecuteRequested => onExecuteRequested
+                    .Select(_ => ReactiveDisposable
+                        .Create(() => modelFactory.CreateFormWorkspace(new CreationModel()
+                        {
+                            Name    = $"New {type} Account",
+                            Type    = type
+                        }))
+                        .Select(formWorkspace => formWorkspace.Closed
+                            .OnSubscribed(() => _hostRequested.OnNext(formWorkspace)))
+                        .Switch())
+                    .Switch()
+                    .SelectUnit());
 
             _editCommand = ReactiveCommand.NotSupported;
 
@@ -169,7 +184,7 @@ namespace Saaft.Desktop.Accounts
         public ReactiveCommand EditCommand
             => _editCommand;
 
-        public IObservable<HostedModelBase> HostRequested
+        public IObservable<IHostedModel> HostRequested
             => _hostRequested;
 
         public bool IsAccount
@@ -190,7 +205,7 @@ namespace Saaft.Desktop.Accounts
         private readonly ReactiveCollection<ReactiveReadOnlyProperty<ListViewItemModel?>>   _children;
         private readonly ReactiveCommand                                                    _createChildCommand;
         private readonly ReactiveCommand                                                    _editCommand;
-        private readonly Subject<HostedModelBase>                                           _hostRequested;
+        private readonly Subject<IHostedModel>                                              _hostRequested;
         private readonly bool                                                               _isAccount;
         private readonly ReactiveReadOnlyProperty<string>                                   _name;
     }
