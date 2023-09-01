@@ -6,8 +6,8 @@ using System.Reactive.Subjects;
 namespace Saaft.Data
 {
     public class StateStore<TEntity, TEvent>
-            : IObservable<TEntity>,
-                IDisposable
+            : DisposableBase,
+                IObservable<TEntity>
         where TEntity : StateEntity<TEvent>
     {
         public StateStore(TEntity initialValue)
@@ -32,10 +32,14 @@ namespace Saaft.Data
         public IDisposable Subscribe(IObserver<TEntity> observer)
             => _valueSource.Subscribe(observer);
 
-        public void Dispose()
+        protected override void OnDisposing(DisposalType type)
         {
-            _valueSource.OnCompleted();
-            _valueSource.Dispose();
+            if (type is DisposalType.Managed)
+            {
+                _valueSource.OnCompleted();
+
+                _valueSource.Dispose();
+            }
         }
 
         private readonly IObservable<TEvent>        _events;

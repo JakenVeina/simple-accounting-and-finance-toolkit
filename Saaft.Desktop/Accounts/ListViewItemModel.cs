@@ -12,7 +12,7 @@ using Saaft.Data.Accounts;
 namespace Saaft.Desktop.Accounts
 {
     public sealed class ListViewItemModel
-        : IDisposable
+        : DisposableBase
     {
         public ListViewItemModel(
             ModelFactory    modelFactory,
@@ -193,11 +193,14 @@ namespace Saaft.Desktop.Accounts
         public ReactiveReadOnlyValue<string> Name
             => _name;
 
-        public void Dispose()
+        protected override void OnDisposing(DisposalType type)
         {
-            _hostRequested.OnCompleted();
+            if (type is DisposalType.Managed)
+            {
+                _hostRequested.OnCompleted();
 
-            _hostRequested.Dispose();
+                _hostRequested.Dispose();
+            }
         }
 
         private readonly ulong?                                                         _accountId;

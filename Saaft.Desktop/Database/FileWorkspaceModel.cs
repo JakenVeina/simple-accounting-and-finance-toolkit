@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.DirectoryServices.ActiveDirectory;
 using System.IO;
 using System.Reactive;
 using System.Reactive.Concurrency;
@@ -14,8 +15,8 @@ using Saaft.Desktop.Prompts;
 namespace Saaft.Desktop.Database
 {
     public sealed class FileWorkspaceModel
-        : IHostedModel,
-            IDisposable
+        : DisposableBase,
+            IHostedModel
     {
         public FileWorkspaceModel(
             FileStateStore  fileState,
@@ -124,13 +125,16 @@ namespace Saaft.Desktop.Database
         public ReactiveReadOnlyValue<string> Title
             => _title;
 
-        public void Dispose()
+        protected override void OnDisposing(DisposalType type)
         {
-            _closeRequested.OnCompleted();
-            _hostRequested.OnCompleted();
+            if (type is DisposalType.Managed)
+            {
+                _closeRequested.OnCompleted();
+                _hostRequested.OnCompleted();
 
-            _closeRequested.Dispose();
-            _hostRequested.Dispose();
+                _closeRequested.Dispose();
+                _hostRequested.Dispose();
+            }
         }
 
         private IObservable<FileEntity> TrySaveIfNeeded(IObservable<FileEntity> loadedFile)
