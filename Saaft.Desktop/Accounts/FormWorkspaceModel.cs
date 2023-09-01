@@ -25,7 +25,7 @@ namespace Saaft.Desktop.Accounts
             _cancelCommand = ReactiveCommand.Create(_closed);
 
             _descriptionSource = new(model.Description);
-            _description       = ReactiveProperty.Create(
+            _description       = ReactiveValue.Create(
                 initialValue:   _descriptionSource.Value,
                 valueSource:    _descriptionSource);
 
@@ -45,7 +45,7 @@ namespace Saaft.Desktop.Accounts
                 })
                 .ShareReplay(1);
 
-            _name = ReactiveProperty.Create(
+            _name = ReactiveValue.Create(
                 initialValue:   _nameSource.Value,
                 valueSource:    _nameSource,
                 errorSource:    nameErrors);
@@ -57,7 +57,7 @@ namespace Saaft.Desktop.Accounts
                             .Select(version => version.Name)
                             .FirstOrDefault())
                     : Observable.Return<string?>(null))
-                .ToReactiveReadOnlyProperty();
+                .ToReactiveReadOnlyValue();
 
             _saveCommand = ReactiveCommand.Create(
                 executeOperation:   onExecuteRequested => onExecuteRequested
@@ -74,7 +74,7 @@ namespace Saaft.Desktop.Accounts
                 canExecute:         nameErrors
                     .Select(errors => errors.Length is 0));
 
-            _title = ReactiveReadOnlyProperty.Create("Create New Account");
+            _title = ReactiveReadOnlyValue.Create("Create New Account");
         }
 
         public FormWorkspaceModel(
@@ -87,7 +87,7 @@ namespace Saaft.Desktop.Accounts
             _cancelCommand = ReactiveCommand.Create(_closed);
 
             _descriptionSource = new(model.Description);
-            _description       = ReactiveProperty.Create(
+            _description       = ReactiveValue.Create(
                 initialValue:   _descriptionSource.Value,
                 valueSource:    _descriptionSource);
 
@@ -108,7 +108,7 @@ namespace Saaft.Desktop.Accounts
                 })
                 .ShareReplay(1);
 
-            _name = ReactiveProperty.Create(
+            _name = ReactiveValue.Create(
                 initialValue:   _nameSource.Value,
                 valueSource:    _nameSource,
                 errorSource:    nameErrors);
@@ -120,7 +120,7 @@ namespace Saaft.Desktop.Accounts
                             .Select(static version => version.Name)
                             .FirstOrDefault())
                     : Observable.Return<string?>(null))
-                .ToReactiveReadOnlyProperty();
+                .ToReactiveReadOnlyValue();
 
             _saveCommand = ReactiveCommand.Create(
                 executeOperation:   onExecuteRequested => onExecuteRequested
@@ -140,7 +140,7 @@ namespace Saaft.Desktop.Accounts
                     nameErrors,
                     static (isDescriptionDirty, isNameDirty, nameErrors) => (isDescriptionDirty || isNameDirty) && (nameErrors.Length is 0)));
 
-            _title = ReactiveReadOnlyProperty.Create("Edit Account");
+            _title = ReactiveReadOnlyValue.Create("Edit Account");
         }
 
         public ReactiveCommand CancelCommand
@@ -149,22 +149,22 @@ namespace Saaft.Desktop.Accounts
         public IObservable<Unit> Closed
             => _closed;
 
-        public ReactiveProperty<string?> Description
+        public ReactiveValue<string?> Description
             => _description;
 
-        public ReactiveProperty<string?> Name
+        public ReactiveValue<string?> Name
             => _name;
 
         public IObserver<Unit> OnCloseRequested
             => _closed;
 
-        public ReactiveReadOnlyProperty<string?> ParentName
+        public ReactiveReadOnlyValue<string?> ParentName
             => _parentName;
 
         public ReactiveCommand SaveCommand
             => _saveCommand;
 
-        public ReactiveReadOnlyProperty<string> Title
+        public ReactiveReadOnlyValue<string> Title
             => _title;
 
         public Data.Accounts.Type Type
@@ -181,15 +181,15 @@ namespace Saaft.Desktop.Accounts
             _nameSource.Dispose();
         }
 
-        private readonly ReactiveCommand                    _cancelCommand;
-        private readonly Subject<Unit>                      _closed;
-        private readonly ReactiveProperty<string?>          _description;
-        private readonly BehaviorSubject<string?>           _descriptionSource;
-        private readonly ReactiveProperty<string?>          _name;
-        private readonly BehaviorSubject<string?>           _nameSource;
-        private readonly ReactiveReadOnlyProperty<string?>  _parentName;
-        private readonly ReactiveCommand                    _saveCommand;
-        private readonly ReactiveReadOnlyProperty<string>   _title;
-        private readonly Data.Accounts.Type                 _type;
+        private readonly ReactiveCommand                _cancelCommand;
+        private readonly Subject<Unit>                  _closed;
+        private readonly ReactiveValue<string?>         _description;
+        private readonly BehaviorSubject<string?>       _descriptionSource;
+        private readonly ReactiveValue<string?>         _name;
+        private readonly BehaviorSubject<string?>       _nameSource;
+        private readonly ReactiveReadOnlyValue<string?> _parentName;
+        private readonly ReactiveCommand                _saveCommand;
+        private readonly ReactiveReadOnlyValue<string>  _title;
+        private readonly Data.Accounts.Type             _type;
     }
 }

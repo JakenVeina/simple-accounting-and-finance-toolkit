@@ -43,7 +43,7 @@ namespace Saaft.Desktop.Database
                 .Select(isFileOpen => isFileOpen
                     ? modelFactory.CreateFileView()
                     : null)
-                .ToReactiveReadOnlyProperty();
+                .ToReactiveReadOnlyValue();
 
             _newFileCommand = ReactiveCommand.Create(
                 executeOperation: onExecuteRequested => onExecuteRequested
@@ -94,7 +94,7 @@ namespace Saaft.Desktop.Database
                     .Select(static fileState => fileState.LoadedFile != FileEntity.None && fileState.LoadedFile.HasChanges)
                     .DistinctUntilChanged());
 
-            _title = ReactiveReadOnlyProperty.Create("Simple Accounting and Finance Toolkit");
+            _title = ReactiveReadOnlyValue.Create("Simple Accounting and Finance Toolkit");
         }
 
         public IObservable<Unit> Closed
@@ -103,7 +103,7 @@ namespace Saaft.Desktop.Database
         public ReactiveCommand CloseFileCommand
             => _closeFileCommand;
 
-        public ReactiveReadOnlyProperty<FileViewModel?> File
+        public ReactiveReadOnlyValue<FileViewModel?> File
             => _file;
 
         public ReactiveCommand NewFileCommand
@@ -121,7 +121,7 @@ namespace Saaft.Desktop.Database
         public ReactiveCommand SaveFileCommand
             => _saveFileCommand;
 
-        public ReactiveReadOnlyProperty<string> Title
+        public ReactiveReadOnlyValue<string> Title
             => _title;
 
         public void Dispose()
@@ -183,15 +183,15 @@ namespace Saaft.Desktop.Database
                     .Select(_ => loadedFile))
                 .Switch();
 
-        private readonly ReactiveCommand                            _closeFileCommand;
-        private readonly Subject<Unit>                              _closeRequested;
-        private readonly ReactiveReadOnlyProperty<FileViewModel?>   _file;
-        private readonly Subject<IHostedModel>                      _hostRequested;
-        private readonly ReactiveCommand                            _newFileCommand;
-        private readonly ReactiveCommand                            _openFileCommand;
-        private readonly Repository                                 _repository;
-        private readonly ReactiveCommand                            _saveFileCommand;
-        private readonly ReactiveReadOnlyProperty<string>           _title;
+        private readonly ReactiveCommand                        _closeFileCommand;
+        private readonly Subject<Unit>                          _closeRequested;
+        private readonly ReactiveReadOnlyValue<FileViewModel?>  _file;
+        private readonly Subject<IHostedModel>                  _hostRequested;
+        private readonly ReactiveCommand                        _newFileCommand;
+        private readonly ReactiveCommand                        _openFileCommand;
+        private readonly Repository                             _repository;
+        private readonly ReactiveCommand                        _saveFileCommand;
+        private readonly ReactiveReadOnlyValue<string>          _title;
 
         private const string _filePromptFilter
             = "Simple Accounting Database (*.saaft)|*.saaft";

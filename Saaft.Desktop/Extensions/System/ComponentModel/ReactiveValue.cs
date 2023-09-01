@@ -6,9 +6,9 @@ using System.Reactive.Subjects;
 
 namespace System.ComponentModel
 {
-    public static class ReactiveProperty
+    public static class ReactiveValue
     {
-        public static ReactiveProperty<T> Create<T>(
+        public static ReactiveValue<T> Create<T>(
                 T           initialValue,
                 ISubject<T> valueSource)
             => new(
@@ -17,7 +17,7 @@ namespace System.ComponentModel
                 onValueSet:     valueSource,
                 valueSource:    valueSource);
 
-        public static ReactiveProperty<T> Create<T>(
+        public static ReactiveValue<T> Create<T>(
                 T                                   initialValue,
                 ISubject<T>                         valueSource,
                 IObservable<IReadOnlyList<object?>> errorSource)
@@ -28,20 +28,20 @@ namespace System.ComponentModel
                 valueSource:    valueSource);
 
         internal static readonly DataErrorsChangedEventArgs ErrorsChangedEventArgs
-            = new(nameof(ReactiveProperty<object>.Value));
+            = new(nameof(ReactiveValue<object>.Value));
 
         internal static readonly PropertyChangedEventArgs ValueChangedEventArgs
-            = new(nameof(ReactiveProperty<object>.Value));
+            = new(nameof(ReactiveValue<object>.Value));
 
         private static readonly IObservable<IReadOnlyList<object?>> _alwaysValid
             = Observable.Return(Array.Empty<object?>());
     }
 
-    public class ReactiveProperty<T>
-        : ReactiveReadOnlyProperty<T>,
+    public class ReactiveValue<T>
+        : ReactiveReadOnlyValue<T>,
             INotifyDataErrorInfo
     {
-        internal ReactiveProperty(
+        internal ReactiveValue(
                 IObservable<IReadOnlyList<object?>> errorsSource,
                 T                                   initialValue,
                 IObserver<T>                        onValueSet,
@@ -53,7 +53,7 @@ namespace System.ComponentModel
             _errors     = Array.Empty<object?>();
             _onValueSet = onValueSet;
 
-            var errorsChangedEventPattern = new EventPattern<DataErrorsChangedEventArgs>(this, ReactiveProperty.ErrorsChangedEventArgs);
+            var errorsChangedEventPattern = new EventPattern<DataErrorsChangedEventArgs>(this, ReactiveValue.ErrorsChangedEventArgs);
             _errorsChanged = errorsSource
                 .Do(errors => _errors = errors)
                 .Finally(() => _errors = Array.Empty<object?>())

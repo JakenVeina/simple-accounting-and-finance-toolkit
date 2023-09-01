@@ -9,12 +9,12 @@ namespace System
         public static ReactiveCollection<T> ToReactiveCollection<T>(this IObservable<ReactiveCollectionAction<T>> actions)
             => new(actions);
 
-        public static ReactiveReadOnlyProperty<T?> ToReactiveReadOnlyProperty<T>(this IObservable<T?> source)
-            => ReactiveReadOnlyProperty.Create(source);
+        public static ReactiveReadOnlyValue<T?> ToReactiveReadOnlyValue<T>(this IObservable<T?> source)
+            => ReactiveReadOnlyValue.Create(source);
 
-        public static ReactiveReadOnlyProperty<T> ToReactiveReadOnlyProperty<T>(
+        public static ReactiveReadOnlyValue<T> ToReactiveReadOnlyValue<T>(
                 this    IObservable<T>  source,
                         T               initialValue)
-            => ReactiveReadOnlyProperty.Create(source, initialValue);
+            => ReactiveReadOnlyValue.Create(source, initialValue);
     }
 }

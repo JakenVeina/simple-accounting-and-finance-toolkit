@@ -10,6 +10,6 @@ namespace Saaft.Desktop
 
         IObserver<Unit> OnCloseRequested { get; }
 
-        ReactiveReadOnlyProperty<string> Title { get; }
+        ReactiveReadOnlyValue<string> Title { get; }
     }
 }

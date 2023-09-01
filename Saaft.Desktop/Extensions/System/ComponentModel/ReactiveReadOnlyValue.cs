@@ -1,23 +1,21 @@
-﻿using System;
-using System.ComponentModel;
-using System.Reactive;
+﻿using System.Reactive;
 using System.Reactive.Linq;
 
 namespace System.ComponentModel
 {
-    public static class ReactiveReadOnlyProperty
+    public static class ReactiveReadOnlyValue
     {
-        public static ReactiveReadOnlyProperty<T> Create<T>(T value)
+        public static ReactiveReadOnlyValue<T> Create<T>(T value)
             => new(
                 initialValue:   value,
                 valueSource:    Observable.Empty<T>());
 
-        public static ReactiveReadOnlyProperty<T?> Create<T>(IObservable<T?> source)
+        public static ReactiveReadOnlyValue<T?> Create<T>(IObservable<T?> source)
             => new(
                 initialValue:   default,
                 valueSource:    source);
 
-        public static ReactiveReadOnlyProperty<T> Create<T>(
+        public static ReactiveReadOnlyValue<T> Create<T>(
                 IObservable<T>  source,
                 T               initialValue)
             => new(
@@ -25,19 +23,19 @@ namespace System.ComponentModel
                 valueSource:    source);
 
         internal static readonly PropertyChangedEventArgs ValueChangedEventArgs
-            = new(nameof(ReactiveReadOnlyProperty<object>.Value));
+            = new(nameof(ReactiveReadOnlyValue<object>.Value));
     }
 
-    public class ReactiveReadOnlyProperty<T>
+    public class ReactiveReadOnlyValue<T>
         : INotifyPropertyChanged
     {
-        internal ReactiveReadOnlyProperty(
+        internal ReactiveReadOnlyValue(
             T                                   initialValue,
             IObservable<T>                      valueSource)
         {
             _value = initialValue;
 
-            var propertyChangedEventPattern = new EventPattern<object?, PropertyChangedEventArgs>(this, ReactiveReadOnlyProperty.ValueChangedEventArgs);
+            var propertyChangedEventPattern = new EventPattern<object?, PropertyChangedEventArgs>(this, ReactiveReadOnlyValue.ValueChangedEventArgs);
             _propertyChanged = valueSource
                 .Do(value => _value = value)
                 .Finally(() => _value = initialValue)

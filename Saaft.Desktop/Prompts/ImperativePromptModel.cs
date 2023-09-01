@@ -11,13 +11,13 @@ namespace Saaft.Desktop.Prompts
         {
             _result = new();
             
-            _title = ReactiveReadOnlyProperty.Create(title);
+            _title = ReactiveReadOnlyValue.Create(title);
         }
 
         public sealed override IObservable<T> Result
             => _result;
 
-        public sealed override ReactiveReadOnlyProperty<string> Title
+        public sealed override ReactiveReadOnlyValue<string> Title
             => _title;
 
         public void Cancel()
@@ -40,7 +40,7 @@ namespace Saaft.Desktop.Prompts
                 _result.Dispose();
         }
 
-        private readonly Subject<T>                         _result;
-        private readonly ReactiveReadOnlyProperty<string>   _title;
+        private readonly Subject<T>                     _result;
+        private readonly ReactiveReadOnlyValue<string>  _title;
     }
 }

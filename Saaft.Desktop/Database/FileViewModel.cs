@@ -24,16 +24,16 @@ namespace Saaft.Desktop.Database
                         ? "*"
                         : ""))
                 .DistinctUntilChanged()
-                .ToReactiveReadOnlyProperty();
+                .ToReactiveReadOnlyValue();
         }
 
         public Accounts.ListViewModel AccountsList
             => _accountsList;
 
-        public ReactiveReadOnlyProperty<string?> Name
+        public ReactiveReadOnlyValue<string?> Name
             => _name;
 
-        private readonly Accounts.ListViewModel             _accountsList;
-        private readonly ReactiveReadOnlyProperty<string?>  _name;
+        private readonly Accounts.ListViewModel         _accountsList;
+        private readonly ReactiveReadOnlyValue<string?> _name;
     }
 }

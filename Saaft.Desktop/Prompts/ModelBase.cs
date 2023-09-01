@@ -37,7 +37,7 @@ namespace Saaft.Desktop.Prompts
 
         public abstract IObservable<T> Result { get; }
 
-        public abstract ReactiveReadOnlyProperty<string> Title { get; }
+        public abstract ReactiveReadOnlyValue<string> Title { get; }
 
         protected IObservable<Unit> CloseRequested
             => _closeRequested;

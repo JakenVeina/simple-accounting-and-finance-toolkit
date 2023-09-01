@@ -75,7 +75,7 @@ namespace Saaft.Desktop.Accounts
                     orderByClause:      static versions => versions.OrderBy(static version => version.Name),
                     selector:           version => ReactiveDisposable
                         .Create(() => modelFactory.CreateListViewItem(version.AccountId))
-                        .ToReactiveReadOnlyProperty())
+                        .ToReactiveReadOnlyValue())
                 .ToReactiveCollection();
 
             _createChildCommand = ReactiveCommand.Create(
@@ -115,7 +115,7 @@ namespace Saaft.Desktop.Accounts
             _name = currentVersion
                 .Select(static version => version.Name)
                 .DistinctUntilChanged()
-                .ToReactiveReadOnlyProperty(string.Empty);
+                .ToReactiveReadOnlyValue(string.Empty);
         }
 
         public ListViewItemModel(
@@ -147,7 +147,7 @@ namespace Saaft.Desktop.Accounts
                     orderByClause:      static versions => versions.OrderBy(static version => version.Name),
                     selector:           version => ReactiveDisposable
                         .Create(() => modelFactory.CreateListViewItem(version.AccountId))
-                        .ToReactiveReadOnlyProperty())
+                        .ToReactiveReadOnlyValue())
                 .ToReactiveCollection();
 
             _createChildCommand = ReactiveCommand.Create(
@@ -166,7 +166,7 @@ namespace Saaft.Desktop.Accounts
 
             _editCommand = ReactiveCommand.NotSupported;
 
-            _name = ReactiveReadOnlyProperty.Create(type.ToString());
+            _name = ReactiveReadOnlyValue.Create(type.ToString());
         }
 
         public ulong? AccountId
@@ -175,7 +175,7 @@ namespace Saaft.Desktop.Accounts
         public ReactiveCommand AdoptAccountIdCommand
             => _adoptAccountIdCommand;
 
-        public ReactiveCollection<ReactiveReadOnlyProperty<ListViewItemModel?>> Children
+        public ReactiveCollection<ReactiveReadOnlyValue<ListViewItemModel?>> Children
             => _children;
 
         public ReactiveCommand CreateChildCommand
@@ -190,7 +190,7 @@ namespace Saaft.Desktop.Accounts
         public bool IsAccount
             => _isAccount;
 
-        public ReactiveReadOnlyProperty<string> Name
+        public ReactiveReadOnlyValue<string> Name
             => _name;
 
         public void Dispose()
@@ -200,13 +200,13 @@ namespace Saaft.Desktop.Accounts
             _hostRequested.Dispose();
         }
 
-        private readonly ulong?                                                             _accountId;
-        private readonly ReactiveCommand                                                    _adoptAccountIdCommand;
-        private readonly ReactiveCollection<ReactiveReadOnlyProperty<ListViewItemModel?>>   _children;
-        private readonly ReactiveCommand                                                    _createChildCommand;
-        private readonly ReactiveCommand                                                    _editCommand;
-        private readonly Subject<IHostedModel>                                              _hostRequested;
-        private readonly bool                                                               _isAccount;
-        private readonly ReactiveReadOnlyProperty<string>                                   _name;
+        private readonly ulong?                                                         _accountId;
+        private readonly ReactiveCommand                                                _adoptAccountIdCommand;
+        private readonly ReactiveCollection<ReactiveReadOnlyValue<ListViewItemModel?>>  _children;
+        private readonly ReactiveCommand                                                _createChildCommand;
+        private readonly ReactiveCommand                                                _editCommand;
+        private readonly Subject<IHostedModel>                                          _hostRequested;
+        private readonly bool                                                           _isAccount;
+        private readonly ReactiveReadOnlyValue<string>                                  _name;
     }
 }
