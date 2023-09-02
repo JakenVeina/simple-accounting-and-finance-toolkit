@@ -55,7 +55,7 @@ namespace System.Windows.Input
                         : _canNeverExecutePredicate),
                 onExecuted: Observer.Create<object?>(_ => onExecuted.OnNext(Unit.Default)));
 
-        public static ReactiveCommand Create(Func<IObservable<Unit>, IObservable<Unit>> executeOperation)
+        public static ReactiveCommand Create(ReactiveOperation<Unit, Unit> executeOperation)
             => new(
                 canExecute:         _canAlwaysExecute,
                 executeOperation:   onExecuteRequested => onExecuteRequested
@@ -63,8 +63,8 @@ namespace System.Windows.Input
                     .ApplyOperation(executeOperation));
 
         public static ReactiveCommand Create(
-                Func<IObservable<Unit>, IObservable<Unit>>  executeOperation,
-                IObservable<bool>                           canExecute)
+                ReactiveOperation<Unit, Unit>   executeOperation,
+                IObservable<bool>               canExecute)
             => new(
                 canExecute:         canExecute
                     .Select(static canExecute => canExecute
@@ -74,7 +74,7 @@ namespace System.Windows.Input
                     .SelectUnit()
                     .ApplyOperation(executeOperation));
 
-        public static ReactiveCommand Create<T>(Func<IObservable<T>, IObservable<Unit>> executeOperation)
+        public static ReactiveCommand Create<T>(ReactiveOperation<T, Unit>  executeOperation)
                 where T : struct
             => new(
                 canExecute:         _canAlwaysExecute,
@@ -84,8 +84,8 @@ namespace System.Windows.Input
                     .ApplyOperation(executeOperation));
 
         public static ReactiveCommand Create<T>(
-                    Func<IObservable<T>, IObservable<Unit>> executeOperation,
-                    IObservable<Predicate<T?>>              canExecute)
+                    ReactiveOperation<T, Unit>  executeOperation,
+                    IObservable<Predicate<T?>>  canExecute)
                 where T : struct
             => new(
                 canExecute:         canExecute
@@ -125,8 +125,8 @@ namespace System.Windows.Input
         }
 
         private ReactiveCommand(
-            IObservable<Predicate<object?>>                 canExecute,
-            Func<IObservable<object?>, IObservable<Unit>>   executeOperation)
+            IObservable<Predicate<object?>>     canExecute,
+            ReactiveOperation<object?, Unit>    executeOperation)
         {
             _canExecutePredicate    = _canNeverExecutePredicate;
             _onExecuted             = _doNothingOnExecuted;

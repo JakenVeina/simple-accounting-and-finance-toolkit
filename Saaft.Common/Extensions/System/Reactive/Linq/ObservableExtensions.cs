@@ -5,8 +5,8 @@ namespace System.Reactive.Linq
     public static class ObservableExtensions
     {
         public static IObservable<TOut> ApplyOperation<TIn, TOut>(
-                this    IObservable<TIn>                            source,
-                        Func<IObservable<TIn>, IObservable<TOut>>   operation)
+                this    IObservable<TIn>                source,
+                        ReactiveOperation<TIn, TOut>    operation)
             => operation.Invoke(source);
 
         public static IObservable<T> OnSubscribed<T>(

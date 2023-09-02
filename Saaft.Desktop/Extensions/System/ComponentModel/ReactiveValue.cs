@@ -1,8 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+
+using Saaft.Desktop.Extensions.System.ComponentModel;
 
 namespace System.ComponentModel
 {
@@ -12,7 +14,7 @@ namespace System.ComponentModel
                 T           initialValue,
                 ISubject<T> valueSource)
             => new(
-                errorsSource:   _alwaysValid,
+                errorsSource:   ReactiveValueBase.AlwaysValidErrorsSource,
                 initialValue:   initialValue,
                 onValueSet:     valueSource,
                 valueSource:    valueSource);
@@ -20,26 +22,16 @@ namespace System.ComponentModel
         public static ReactiveValue<T> Create<T>(
                 T                                   initialValue,
                 ISubject<T>                         valueSource,
-                IObservable<IReadOnlyList<object?>> errorSource)
+                IObservable<IReadOnlyList<object?>> errorsSource)
             => new(
-                errorsSource:   errorSource,
+                errorsSource:   errorsSource,
                 initialValue:   initialValue,
                 onValueSet:     valueSource,
                 valueSource:    valueSource);
-
-        internal static readonly DataErrorsChangedEventArgs ErrorsChangedEventArgs
-            = new(nameof(ReactiveValue<object>.Value));
-
-        internal static readonly PropertyChangedEventArgs ValueChangedEventArgs
-            = new(nameof(ReactiveValue<object>.Value));
-
-        private static readonly IObservable<IReadOnlyList<object?>> _alwaysValid
-            = Observable.Return(Array.Empty<object?>());
     }
 
-    public class ReactiveValue<T>
-        : ReactiveReadOnlyValue<T>,
-            INotifyDataErrorInfo
+    public sealed class ReactiveValue<T>
+        : ReactiveValueBase<T>
     {
         internal ReactiveValue(
                 IObservable<IReadOnlyList<object?>> errorsSource,
@@ -47,19 +39,49 @@ namespace System.ComponentModel
                 IObserver<T>                        onValueSet,
                 IObservable<T>                      valueSource)
             : base(
-                initialValue:   initialValue,
-                valueSource:    valueSource)
+                errorsSource:   errorsSource,
+                initialValue:   initialValue)
         {
-            _errors     = Array.Empty<object?>();
-            _onValueSet = onValueSet;
+            _propertyChanged = BuildPropertyChangedSource(this, initialValue, valueSource);
 
-            var errorsChangedEventPattern = new EventPattern<DataErrorsChangedEventArgs>(this, ReactiveValue.ErrorsChangedEventArgs);
-            _errorsChanged = errorsSource
-                .Do(errors => _errors = errors)
-                .Finally(() => _errors = Array.Empty<object?>())
-                .Select(_ => errorsChangedEventPattern)
-                .Share()
-                .ToEventPattern();
+            _onValueSet = onValueSet;
+        }
+
+        internal ReactiveValue(
+                IObservable<IReadOnlyList<object?>> errorsSource,
+                T                                   initialValue,
+                ReactiveOperation<T, Unit>          setValueOperation,
+                IObservable<T>                      valueSource)
+            : base(
+                errorsSource:   errorsSource,
+                initialValue:   initialValue)
+        {
+            _propertyChanged = BuildPropertyChangedSource(this, initialValue, Observable.Create<T>(observer =>
+            {
+                var onValueSet = new Subject<T>();
+                _onValueSet = onValueSet;
+
+                return new CompositeDisposable()
+                {
+                    Disposable.Create(() =>
+                    {
+                        onValueSet.OnCompleted();
+
+                        _onValueSet = _doNothingOnValueSet;
+
+                        onValueSet.Dispose();
+                    }),
+
+                    onValueSet
+                        .ApplyOperation(setValueOperation)
+                        .Subscribe(),
+
+                    valueSource
+                        .Subscribe(observer)
+                };
+            }));
+
+            _onValueSet = _doNothingOnValueSet;
         }
 
         new public T Value
@@ -68,21 +90,17 @@ namespace System.ComponentModel
             set => _onValueSet.OnNext(value);
         }
 
-        bool INotifyDataErrorInfo.HasErrors
-            => _errors.Count is not 0;
-
-        event EventHandler<DataErrorsChangedEventArgs>? INotifyDataErrorInfo.ErrorsChanged
+        protected override event PropertyChangedEventHandler? PropertyChanged
         {
-            add     => _errorsChanged.OnNext += value;
-            remove  => _errorsChanged.OnNext -= value;
+            add     => _propertyChanged.OnNext += value;
+            remove  => _propertyChanged.OnNext -= value;
         }
 
-        IEnumerable INotifyDataErrorInfo.GetErrors(string? propertyName)
-            => _errors;
+        private readonly IPropertyChangedEventSource _propertyChanged;
 
-        private readonly IEventPatternSource<DataErrorsChangedEventArgs>    _errorsChanged;
-        private readonly IObserver<T>                                       _onValueSet;
+        private IObserver<T> _onValueSet;
 
-        private IReadOnlyList<object?> _errors;
+        private static readonly IObserver<T> _doNothingOnValueSet
+            = Observer.Create<T>(static _ => { });
     }
 }

@@ -48,7 +48,7 @@ namespace Saaft.Desktop.Accounts
             _name = ReactiveValue.Create(
                 initialValue:   _nameSource.Value,
                 valueSource:    _nameSource,
-                errorSource:    nameErrors);
+                errorsSource:   nameErrors);
 
             _parentName = ((model.ParentAccountId is ulong parentAccountId)
                     ? repository.CurrentVersions
@@ -111,7 +111,7 @@ namespace Saaft.Desktop.Accounts
             _name = ReactiveValue.Create(
                 initialValue:   _nameSource.Value,
                 valueSource:    _nameSource,
-                errorSource:    nameErrors);
+                errorsSource:   nameErrors);
 
             _parentName = ((model.ParentAccountId is ulong parentAccountId)
                     ? repository.CurrentVersions

@@ -1,5 +1,8 @@
-﻿using System.Reactive;
+﻿using System.Collections.Generic;
+using System.Reactive;
 using System.Reactive.Linq;
+
+using Saaft.Desktop.Extensions.System.ComponentModel;
 
 namespace System.ComponentModel
 {
@@ -7,11 +10,13 @@ namespace System.ComponentModel
     {
         public static ReactiveReadOnlyValue<T> Create<T>(T value)
             => new(
+                errorsSource:   ReactiveValueBase.AlwaysValidErrorsSource,
                 initialValue:   value,
-                valueSource:    Observable.Empty<T>());
+                valueSource:    Observable.Never<T>());
 
         public static ReactiveReadOnlyValue<T?> Create<T>(IObservable<T?> source)
             => new(
+                errorsSource:   ReactiveValueBase.AlwaysValidErrorsSource,
                 initialValue:   default,
                 valueSource:    source);
 
@@ -19,42 +24,32 @@ namespace System.ComponentModel
                 IObservable<T>  source,
                 T               initialValue)
             => new(
+                errorsSource:   ReactiveValueBase.AlwaysValidErrorsSource,
                 initialValue:   initialValue,
                 valueSource:    source);
-
-        internal static readonly PropertyChangedEventArgs ValueChangedEventArgs
-            = new(nameof(ReactiveReadOnlyValue<object>.Value));
     }
 
     public class ReactiveReadOnlyValue<T>
-        : INotifyPropertyChanged
+        : ReactiveValueBase<T>
     {
         internal ReactiveReadOnlyValue(
-            T                                   initialValue,
-            IObservable<T>                      valueSource)
-        {
-            _value = initialValue;
+                    IObservable<IReadOnlyList<object?>> errorsSource,
+                    T                                   initialValue,
+                    IObservable<T>                      valueSource)
+                : base(
+                    errorsSource:   errorsSource,
+                    initialValue:   initialValue)
+            => _propertyChanged = BuildPropertyChangedSource(this, initialValue, valueSource);
 
-            var propertyChangedEventPattern = new EventPattern<object?, PropertyChangedEventArgs>(this, ReactiveReadOnlyValue.ValueChangedEventArgs);
-            _propertyChanged = valueSource
-                .Do(value => _value = value)
-                .Finally(() => _value = initialValue)
-                .Select(_ => propertyChangedEventPattern)
-                .Share()
-                .ToEventPattern();
-        }
+        new public T Value
+            => Value;
 
-        public T Value
-            => _value;
-
-        event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
+        protected override event PropertyChangedEventHandler? PropertyChanged
         {
             add     => _propertyChanged.OnNext += value;
             remove  => _propertyChanged.OnNext -= value;
         }
 
         private readonly IPropertyChangedEventSource _propertyChanged;
-
-        private T _value;
     }
 }
