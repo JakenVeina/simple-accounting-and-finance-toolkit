@@ -42,7 +42,7 @@ namespace System.ComponentModel
             => _propertyChanged = BuildPropertyChangedSource(this, initialValue, valueSource);
 
         new public T Value
-            => Value;
+            => base.Value;
 
         protected override event PropertyChangedEventHandler? PropertyChanged
         {
