@@ -22,7 +22,7 @@ namespace Saaft.Desktop.Accounts
             _closed = new();
             _type   = model.Type;
 
-            _cancelCommand = ReactiveCommand.Create(_closed);
+            _cancelCommand = ReactiveActionCommand.Create(onExecuteRequested: Close);
 
             _descriptionSource = new(model.Description);
             _description       = ReactiveValue.Create(
@@ -50,6 +50,15 @@ namespace Saaft.Desktop.Accounts
                 valueSource:    _nameSource,
                 errorsSource:   nameErrors);
 
+            _onCloseRequested = Observer.Create<Unit>(
+                onNext:         unit =>
+                {
+                    _closed.OnNext(unit);
+                    _closed.OnCompleted();
+                },
+                onError:        _closed.OnError,
+                onCompleted:    _closed.OnCompleted);
+
             _parentName = ((model.ParentAccountId is ulong parentAccountId)
                     ? repository.CurrentVersions
                         .Select(versions => versions
@@ -59,8 +68,10 @@ namespace Saaft.Desktop.Accounts
                     : Observable.Return<string?>(null))
                 .ToReactiveReadOnlyValue();
 
-            _saveCommand = ReactiveCommand.Create(
-                executeOperation:   onExecuteRequested => onExecuteRequested
+            _saveCommand = ReactiveActionCommand.Create(
+                canExecute:         nameErrors
+                    .Select(errors => errors.Length is 0),
+                executeOperation:   executeRequested => executeRequested
                     .WithLatestFrom(_descriptionSource,         (_, description) => description)
                     .WithLatestFrom(_nameSource.WhereNotNull(), (description, name) => (description, name))
                     .Select(@params => model with
@@ -70,9 +81,7 @@ namespace Saaft.Desktop.Accounts
                     })
                     .ApplyOperation(repository.Create)
                     .Do(_ => _closed.OnNext(Unit.Default))
-                    .SelectUnit(),
-                canExecute:         nameErrors
-                    .Select(errors => errors.Length is 0));
+                    .SelectUnit());
 
             _title = ReactiveReadOnlyValue.Create("Create New Account");
         }
@@ -84,7 +93,7 @@ namespace Saaft.Desktop.Accounts
             _closed = new();
             _type   = model.Type;
 
-            _cancelCommand = ReactiveCommand.Create(_closed);
+            _cancelCommand = ReactiveActionCommand.Create(onExecuteRequested: Close);
 
             _descriptionSource = new(model.Description);
             _description       = ReactiveValue.Create(
@@ -113,6 +122,15 @@ namespace Saaft.Desktop.Accounts
                 valueSource:    _nameSource,
                 errorsSource:   nameErrors);
 
+            _onCloseRequested = Observer.Create<Unit>(
+                onNext:         unit =>
+                {
+                    _closed.OnNext(unit);
+                    _closed.OnCompleted();
+                },
+                onError:        _closed.OnError,
+                onCompleted:    _closed.OnCompleted);
+
             _parentName = ((model.ParentAccountId is ulong parentAccountId)
                     ? repository.CurrentVersions
                         .Select(versions => versions
@@ -122,8 +140,13 @@ namespace Saaft.Desktop.Accounts
                     : Observable.Return<string?>(null))
                 .ToReactiveReadOnlyValue();
 
-            _saveCommand = ReactiveCommand.Create(
-                executeOperation:   onExecuteRequested => onExecuteRequested
+            _saveCommand = ReactiveActionCommand.Create(
+                canExecute:         Observable.CombineLatest(
+                    _descriptionSource.Select(description => description != model.Description),
+                    _nameSource.Select(name => name != model.Name),
+                    nameErrors,
+                    static (isDescriptionDirty, isNameDirty, nameErrors) => (isDescriptionDirty || isNameDirty) && (nameErrors.Length is 0)),
+                executeOperation:   executeRequested => executeRequested
                     .WithLatestFrom(_descriptionSource,         static (_, description) => description)
                     .WithLatestFrom(_nameSource.WhereNotNull(), static (description, name) => (description, name))
                     .Select(@params => model with
@@ -133,17 +156,12 @@ namespace Saaft.Desktop.Accounts
                     })
                     .ApplyOperation(repository.Mutate)
                     .Do(_ => _closed.OnNext(Unit.Default))
-                    .SelectUnit(),
-                canExecute:         Observable.CombineLatest(
-                    _descriptionSource.Select(description => description != model.Description),
-                    _nameSource.Select(name => name != model.Name),
-                    nameErrors,
-                    static (isDescriptionDirty, isNameDirty, nameErrors) => (isDescriptionDirty || isNameDirty) && (nameErrors.Length is 0)));
+                    .SelectUnit());
 
             _title = ReactiveReadOnlyValue.Create("Edit Account");
         }
 
-        public ReactiveCommand CancelCommand
+        public IReactiveActionCommand CancelCommand
             => _cancelCommand;
 
         public IObservable<Unit> Closed
@@ -156,12 +174,12 @@ namespace Saaft.Desktop.Accounts
             => _name;
 
         public IObserver<Unit> OnCloseRequested
-            => _closed;
+            => _onCloseRequested;
 
         public ReactiveReadOnlyValue<string?> ParentName
             => _parentName;
 
-        public ReactiveCommand SaveCommand
+        public IReactiveActionCommand SaveCommand
             => _saveCommand;
 
         public ReactiveReadOnlyValue<string> Title
@@ -174,24 +192,33 @@ namespace Saaft.Desktop.Accounts
         {
             if (type is DisposalType.Managed)
             {
-                _closed.OnCompleted();
-                _descriptionSource.OnCompleted();
-                _nameSource.OnCompleted();
+                _closed             .OnCompleted();
+                _descriptionSource  .OnCompleted();
+                _nameSource         .OnCompleted();
 
-                _closed.Dispose();
-                _descriptionSource.Dispose();
-                _nameSource.Dispose();
+                _cancelCommand      .Dispose();
+                _closed             .Dispose();
+                _descriptionSource  .Dispose();
+                _nameSource         .Dispose();
+                _saveCommand        .Dispose();
             }
         }
 
-        private readonly ReactiveCommand                _cancelCommand;
+        private void Close()
+        {
+            _closed.OnNext(Unit.Default);
+            _closed.OnCompleted();
+        }
+
+        private readonly ReactiveActionCommand          _cancelCommand;
         private readonly Subject<Unit>                  _closed;
         private readonly ReactiveValue<string?>         _description;
         private readonly BehaviorSubject<string?>       _descriptionSource;
         private readonly ReactiveValue<string?>         _name;
         private readonly BehaviorSubject<string?>       _nameSource;
+        private readonly IObserver<Unit>                _onCloseRequested;
         private readonly ReactiveReadOnlyValue<string?> _parentName;
-        private readonly ReactiveCommand                _saveCommand;
+        private readonly ReactiveActionCommand          _saveCommand;
         private readonly ReactiveReadOnlyValue<string>  _title;
         private readonly Data.Accounts.Type             _type;
     }

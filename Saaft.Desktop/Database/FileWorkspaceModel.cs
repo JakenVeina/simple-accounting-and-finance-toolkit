@@ -27,16 +27,16 @@ namespace Saaft.Desktop.Database
             _hostRequested  = new();
             _repository     = repository;
 
-            _closeFileCommand = ReactiveCommand.Create(
-                executeOperation:   onExecuteRequested => onExecuteRequested
+            _closeFileCommand = ReactiveActionCommand.Create(
+                canExecute:         fileState
+                    .Select(static fileState => fileState.LoadedFile != FileEntity.None)
+                    .DistinctUntilChanged(),
+                executeOperation:   executeRequested => executeRequested
                     .WithLatestFrom(fileState, static (_, fileState) => fileState.LoadedFile)
                     .ApplyOperation(TrySaveIfNeeded)
                     .SelectUnit()
                     .ApplyOperation(repository.CloseFile)
-                    .SelectUnit(),
-                canExecute:         fileState
-                    .Select(static fileState => fileState.LoadedFile != FileEntity.None)
-                    .DistinctUntilChanged());
+                    .SelectUnit());
 
             _file = fileState
                 .Select(fileState => fileState.LoadedFile != FileEntity.None)
@@ -46,15 +46,15 @@ namespace Saaft.Desktop.Database
                     : null)
                 .ToReactiveReadOnlyValue();
 
-            _newFileCommand = ReactiveCommand.Create(
-                executeOperation: onExecuteRequested => onExecuteRequested
+            _newFileCommand = ReactiveActionCommand.Create(
+                executeOperation: executeRequested => executeRequested
                     .WithLatestFrom(fileState, static (_, fileState) => fileState.LoadedFile)
                     .ApplyOperation(TrySaveIfNeeded)
                     .SelectUnit()
                     .ApplyOperation(repository.LoadNewFile)
                     .SelectUnit());
 
-            _openFileCommand = ReactiveCommand.Create(
+            _openFileCommand = ReactiveActionCommand.Create(
                 executeOperation: onExecuteRequested => onExecuteRequested
                     .WithLatestFrom(fileState, static (_, fileState) => fileState.LoadedFile)
                     .ApplyOperation(TrySaveIfNeeded)
@@ -86,14 +86,14 @@ namespace Saaft.Desktop.Database
                     .ApplyOperation(repository.LoadFile)
                     .SelectUnit());
 
-            _saveFileCommand = ReactiveCommand.Create(
-                executeOperation: onExecuteRequested => onExecuteRequested
-                    .WithLatestFrom(fileState, static (_, fileState) => fileState.LoadedFile)
-                    .ApplyOperation(TrySave)
-                    .SelectUnit(),
+            _saveFileCommand = ReactiveActionCommand.Create(
                 canExecute: fileState
                     .Select(static fileState => fileState.LoadedFile != FileEntity.None && fileState.LoadedFile.HasChanges)
-                    .DistinctUntilChanged());
+                    .DistinctUntilChanged(),
+                executeOperation: executeRequested => executeRequested
+                    .WithLatestFrom(fileState, static (_, fileState) => fileState.LoadedFile)
+                    .ApplyOperation(TrySave)
+                    .SelectUnit());
 
             _title = ReactiveReadOnlyValue.Create("Simple Accounting and Finance Toolkit");
         }
@@ -101,25 +101,25 @@ namespace Saaft.Desktop.Database
         public IObservable<Unit> Closed
             => _closeRequested;
 
-        public ReactiveCommand CloseFileCommand
+        public IReactiveActionCommand CloseFileCommand
             => _closeFileCommand;
 
         public ReactiveReadOnlyValue<FileViewModel?> File
             => _file;
 
-        public ReactiveCommand NewFileCommand
+        public IReactiveActionCommand NewFileCommand
             => _newFileCommand;
 
         public IObserver<Unit> OnCloseRequested
             => _closeRequested;
 
-        public ReactiveCommand OpenFileCommand
+        public IReactiveActionCommand OpenFileCommand
             => _openFileCommand;
 
         public IObservable<IHostedModel> HostRequested
             => _hostRequested;
 
-        public ReactiveCommand SaveFileCommand
+        public IReactiveActionCommand SaveFileCommand
             => _saveFileCommand;
 
         public ReactiveReadOnlyValue<string> Title
@@ -132,8 +132,12 @@ namespace Saaft.Desktop.Database
                 _closeRequested.OnCompleted();
                 _hostRequested.OnCompleted();
 
-                _closeRequested.Dispose();
-                _hostRequested.Dispose();
+                _closeFileCommand   .Dispose();
+                _closeRequested     .Dispose();
+                _hostRequested      .Dispose();
+                _newFileCommand     .Dispose();
+                _openFileCommand    .Dispose();
+                _saveFileCommand    .Dispose();
             }
         }
 
@@ -187,14 +191,14 @@ namespace Saaft.Desktop.Database
                     .Select(_ => loadedFile))
                 .Switch();
 
-        private readonly ReactiveCommand                        _closeFileCommand;
+        private readonly ReactiveActionCommand                  _closeFileCommand;
         private readonly Subject<Unit>                          _closeRequested;
         private readonly ReactiveReadOnlyValue<FileViewModel?>  _file;
         private readonly Subject<IHostedModel>                  _hostRequested;
-        private readonly ReactiveCommand                        _newFileCommand;
-        private readonly ReactiveCommand                        _openFileCommand;
+        private readonly ReactiveActionCommand                  _newFileCommand;
+        private readonly ReactiveActionCommand                  _openFileCommand;
         private readonly Repository                             _repository;
-        private readonly ReactiveCommand                        _saveFileCommand;
+        private readonly ReactiveActionCommand                  _saveFileCommand;
         private readonly ReactiveReadOnlyValue<string>          _title;
 
         private const string _filePromptFilter

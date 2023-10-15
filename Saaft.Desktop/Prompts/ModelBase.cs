@@ -15,7 +15,7 @@ namespace Saaft.Desktop.Prompts
         {
             _closeRequested = new();
             
-            _cancelCommand = ReactiveCommand.Create(_closeRequested);
+            _cancelCommand = ReactiveActionCommand.Create(_closeRequested);
 
             _closed = Observable.Create<Unit>(observer => Result
                 .Finally(() =>
@@ -26,7 +26,7 @@ namespace Saaft.Desktop.Prompts
                 .Subscribe());
         }
 
-        public ReactiveCommand CancelCommand
+        public IReactiveActionCommand CancelCommand
             => _cancelCommand;
 
         public IObservable<Unit> Closed
@@ -46,11 +46,12 @@ namespace Saaft.Desktop.Prompts
         {
             _closeRequested.OnCompleted();
 
-            _closeRequested.Dispose();
+            _cancelCommand  .Dispose();
+            _closeRequested .Dispose();
         }
 
-        private readonly ReactiveCommand    _cancelCommand;
-        private readonly IObservable<Unit>  _closed;
-        private readonly Subject<Unit>      _closeRequested;
+        private readonly ReactiveActionCommand  _cancelCommand;
+        private readonly IObservable<Unit>      _closed;
+        private readonly Subject<Unit>          _closeRequested;
     }
 }
